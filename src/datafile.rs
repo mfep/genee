@@ -8,15 +8,15 @@ use std::path::PathBuf;
 const DELIMETER: char = ',';
 
 #[derive(Debug)]
-struct DiaryRow {
-    date: NaiveDate,
-    data: Vec<bool>,
+pub struct DiaryRow {
+    pub date: NaiveDate,
+    pub data: Vec<bool>,
 }
 
 #[derive(Debug, Default)]
 pub struct DiaryData {
-    header: Vec<String>,
-    data: Vec<DiaryRow>,
+    pub header: Vec<String>,
+    pub data: Vec<DiaryRow>,
 }
 
 pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
@@ -54,3 +54,5 @@ pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
     }
     Ok(data)
 }
+
+// pub fn calculate_data_counts(data: DiaryData, from: NaiveDate, to: NaiveDate) -> 
