@@ -55,4 +55,52 @@ pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
     Ok(data)
 }
 
-// pub fn calculate_data_counts(data: DiaryData, from: NaiveDate, to: NaiveDate) -> 
+pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate) -> Vec<usize> {
+    let mut result : Vec<usize> = data.header.iter().map(|_| 0).collect();
+    for row in data.data.iter().rev() {
+        let date = &row.date;
+        if date < &from || date > &to {
+            continue;
+        }
+        for (i, val) in row.data.iter().enumerate() {
+            if *val {
+                result[i] += 1;
+            }
+        }
+    }
+    return result;
+}
+
+#[test]
+fn test_calculate_data_counts() {
+    let data = DiaryData {
+        header: vec![
+            String::from("A"),
+            String::from("B"),
+            String::from("C")],
+        data: vec![
+            DiaryRow {
+                date: NaiveDate::from_ymd(2020, 1, 1),
+                data: vec![true, false, false],
+            },
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 1),
+                data: vec![true, false, false],
+            },
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 2),
+                data: vec![true, true, false],
+            },
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 3),
+                data: vec![true, true, true],
+            },
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 4),
+                data: vec![true, false, false],
+            },
+        ],
+    };
+    let result = calculate_data_counts(&data, &NaiveDate::from_ymd(2020, 8, 5), &NaiveDate::from_ymd(2021, 1, 3));
+    assert_eq!(vec![3, 2, 1], result);
+}
