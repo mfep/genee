@@ -1,6 +1,6 @@
-use crate::datafile::{DiaryData, calculate_data_counts};
+use crate::datafile::{calculate_data_counts, DiaryData};
 use anyhow::{bail, Result};
-use chrono::{Local, Duration};
+use chrono::{Duration, Local};
 
 pub fn graph_last_n_days(data: &DiaryData, n: usize, max_width: usize) -> Result<()> {
     if max_width < 10 {
@@ -13,7 +13,6 @@ pub fn graph_last_n_days(data: &DiaryData, n: usize, max_width: usize) -> Result
     println!("Occurences in the last {} days:\n{}", n, rows);
     Ok(())
 }
-
 
 fn generate_rows(names: &[String], counts: &[usize], max_width: usize) -> Result<String> {
     const BLOCK: &str = "▇";
