@@ -17,5 +17,5 @@ fn main() {
     setup_panic!();
     let opt = Opt::from_args();
     let data = parse_csv_to_diary_data(&opt.data_file).unwrap();
-    graph_last_n_days(&data, 30, 10).unwrap();
+    graph_last_n_days(&data, 30, 50).unwrap();
 }
