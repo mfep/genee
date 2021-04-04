@@ -1,6 +1,7 @@
 use crate::datafile::{calculate_data_counts, DiaryData};
 use anyhow::{bail, Result};
 use chrono::{Duration, Local};
+use yansi::Paint;
 
 pub fn graph_last_n_days(data: &DiaryData, n: usize, max_width: usize) -> Result<()> {
     if max_width < 10 {
@@ -27,13 +28,18 @@ fn generate_rows(names: &[String], counts: &[usize], max_width: usize) -> Result
     }
     let max_count = max_count.unwrap();
     for (name, &count) in names.iter().zip(counts.iter()) {
-        ret += &format!("{:<3}", name);
+        ret += &format!("{:<3}", Paint::blue(name).italic());
         ret += " ";
         let width = count * max_width / max_count;
-        for _ in 0..width {
-            ret += BLOCK;
+        if width == 0 {
+            ret += &Paint::green("▏").to_string();
+            ret += &format!("{}\n", Paint::new(count).bold());
+        } else {
+            for _ in 0..width {
+                ret += &Paint::green(BLOCK).to_string();
+            }
+            ret += &format!(" {}\n", Paint::new(count).bold());
         }
-        ret += &format!(" {}\n", count);
     }
     Ok(ret)
 }
