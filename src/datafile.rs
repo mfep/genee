@@ -1,11 +1,12 @@
 use anyhow::{bail, Context, Result};
 use chrono::NaiveDate;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-const DELIMETER: char = ',';
+pub const DELIMETER: char = ',';
+const DATE_FORMAT: &str = "%Y-%m-%d";
 
 #[derive(Debug)]
 pub struct DiaryRow {
@@ -31,7 +32,7 @@ pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
             .nth(0)
             .context("Date does not exist in data file")?;
         let mut row = DiaryRow {
-            date: NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+            date: NaiveDate::parse_from_str(date_str, DATE_FORMAT)
                 .context(format!("Cannot parse date in data file: \"{}\"", date_str))?,
             data: vec![],
         };
@@ -60,6 +61,24 @@ pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate)
     return result;
 }
 
+pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[bool]) -> Result<()> {
+    let header = read_header_only(path)?;
+    if header.len() != new_data.len() {
+        bail!("The provided additional data does not match the datafile header in size");
+    }
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(path)
+        .context("Could not open datafile for writing")?;
+    let date_string = date.format(DATE_FORMAT);
+    let content: Vec<&str> = new_data.iter().map(|&x| if x { "x" } else { "" }).collect();
+    let content = content.join(&String::from(DELIMETER));
+    writeln!(file, "{}{}{}", date_string, DELIMETER, content)
+        .context("Could not append to datafile")?;
+    Ok(())
+}
+
 fn get_datafile_reader(path: &PathBuf) -> Result<BufReader<File>> {
     let csv_file = File::open(path).context(format!("Cannot open data file at {:?}", path))?;
     let reader = BufReader::new(csv_file);
@@ -80,6 +99,11 @@ fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
         header_data.push(String::from(header_str));
     }
     Ok(header_data)
+}
+
+fn read_header_only(path: &PathBuf) -> Result<Vec<String>> {
+    let mut reader = get_datafile_reader(path)?;
+    read_header(&mut reader)
 }
 
 #[test]
