@@ -25,15 +25,21 @@ pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
     let mut data = DiaryData::default();
 
     data.header = read_header(&mut reader)?;
-    for line in reader.lines() {
+    let mut last_date = NaiveDate::from_ymd(1, 1, 1);
+    for (i, line) in reader.lines().enumerate() {
         let line = line.context("Cannot read data file")?;
         let mut splitted = line.split(DELIMETER);
         let date_str = splitted
             .nth(0)
             .context("Date does not exist in data file")?;
+        let current_date = NaiveDate::parse_from_str(date_str, DATE_FORMAT)
+            .context(format!("Cannot parse date in data file: \"{}\"", date_str))?;
+        if current_date <= last_date {
+            bail!(format!("Corrupt datestamp in datafile at line {}", i + 2));
+        }
+        last_date = current_date;
         let mut row = DiaryRow {
-            date: NaiveDate::parse_from_str(date_str, DATE_FORMAT)
-                .context(format!("Cannot parse date in data file: \"{}\"", date_str))?,
+            date: current_date,
             data: vec![],
         };
         for part in splitted {
