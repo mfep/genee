@@ -20,21 +20,10 @@ pub struct DiaryData {
 }
 
 pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
-    let csv_file = File::open(path).context(format!("Cannot open data file at {:?}", path))?;
-    let mut reader = BufReader::new(csv_file);
+    let mut reader = get_datafile_reader(path)?;
     let mut data = DiaryData::default();
 
-    let mut header_line = String::new();
-    reader
-        .read_line(&mut header_line)
-        .context("Cannot read first line of data file")?;
-    for header_str in header_line.split(DELIMETER) {
-        let header_str = header_str.trim();
-        if header_str.is_empty() {
-            bail!("Data file header is empty");
-        }
-        data.header.push(String::from(header_str));
-    }
+    data.header = read_header(&mut reader)?;
     for line in reader.lines() {
         let line = line.context("Cannot read data file")?;
         let mut splitted = line.split(DELIMETER);
@@ -62,13 +51,35 @@ pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate)
         if date < &from || date > &to {
             continue;
         }
-        for (i, val) in row.data.iter().enumerate() {
-            if *val {
+        for (i, &val) in row.data.iter().enumerate() {
+            if val {
                 result[i] += 1;
             }
         }
     }
     return result;
+}
+
+fn get_datafile_reader(path: &PathBuf) -> Result<BufReader<File>> {
+    let csv_file = File::open(path).context(format!("Cannot open data file at {:?}", path))?;
+    let reader = BufReader::new(csv_file);
+    Ok(reader)
+}
+
+fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
+    let mut header_data = vec![];
+    let mut header_line = String::new();
+    reader
+        .read_line(&mut header_line)
+        .context("Cannot read first line of data file")?;
+    for header_str in header_line.split(DELIMETER) {
+        let header_str = header_str.trim();
+        if header_str.is_empty() {
+            bail!("Data file header is empty");
+        }
+        header_data.push(String::from(header_str));
+    }
+    Ok(header_data)
 }
 
 #[test]
