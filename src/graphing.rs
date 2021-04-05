@@ -1,4 +1,5 @@
-use crate::datafile::{calculate_data_counts, DiaryData};
+use crate::datafile;
+use crate::datafile::DiaryData;
 use anyhow::{bail, Result};
 use chrono::{Duration, Local};
 use yansi::Paint;
@@ -9,7 +10,7 @@ pub fn graph_last_n_days(data: &DiaryData, n: usize, max_width: usize) -> Result
     }
     let today = Local::today().naive_local();
     let from_day = today.checked_sub_signed(Duration::days(n as i64)).unwrap();
-    let counts = calculate_data_counts(data, &from_day, &today);
+    let counts = datafile::calculate_data_counts(data, &from_day, &today);
     let rows = generate_rows(&data.header, &counts, max_width)?;
     println!("Occurences in the last {} days:\n{}", n, rows);
     Ok(())
