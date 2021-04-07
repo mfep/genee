@@ -3,6 +3,7 @@ name = "genee"
 version = "0.1.0"
 authors = ["lorinc"]
 edition = "2018"
+default-run = "genee"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,3 +13,4 @@ anyhow = "1.0"
 human-panic = "1.0.3"
 structopt = "0.3.21"
 yansi = "0.5.0"
+rand = "0.8.3"

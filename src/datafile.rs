@@ -85,6 +85,23 @@ pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[boo
     Ok(())
 }
 
+pub fn serialize_to_csv(path: &PathBuf, data: &DiaryData) -> Result<()> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(path)
+        .context("Could not open file for writing")?;
+    let header = data.header.join(&String::from(DELIMETER));
+    writeln!(file, "{}", header)?;
+    for row in &data.data {
+        let date = row.date.format(DATE_FORMAT);
+        let content: Vec<&str> = row.data.iter().map(|&x| if x { "x" } else { "" }).collect();
+        let joined_content = content.join(&String::from(DELIMETER));
+        writeln!(file, "{}{}{}", date, DELIMETER, joined_content)?;
+    }
+    Ok(())
+}
+
 fn get_datafile_reader(path: &PathBuf) -> Result<BufReader<File>> {
     let csv_file = File::open(path).context(format!("Cannot open data file at {:?}", path))?;
     let reader = BufReader::new(csv_file);

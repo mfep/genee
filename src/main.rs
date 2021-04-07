@@ -1,8 +1,7 @@
-mod datafile;
-mod graphing;
-
 use anyhow::Result;
 use chrono::Local;
+use genee::datafile;
+use genee::graphing;
 use human_panic::setup_panic;
 use std::path::PathBuf;
 use structopt::StructOpt;
