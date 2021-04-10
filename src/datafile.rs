@@ -86,13 +86,10 @@ pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[boo
 }
 
 pub fn serialize_to_csv(path: &PathBuf, data: &DiaryData) -> Result<()> {
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(path)
+    let mut file = File::create(path)
         .context("Could not open file for writing")?;
     let header = data.header.join(&String::from(DELIMETER));
-    writeln!(file, "{}", header)?;
+    writeln!(file, "date,{}", header)?;
     for row in &data.data {
         let date = row.date.format(DATE_FORMAT);
         let content: Vec<&str> = row.data.iter().map(|&x| if x { "x" } else { "" }).collect();
@@ -114,7 +111,7 @@ fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
     reader
         .read_line(&mut header_line)
         .context("Cannot read first line of data file")?;
-    for header_str in header_line.split(DELIMETER) {
+    for header_str in header_line.split(DELIMETER).skip(1) { // skip 'date'
         let header_str = header_str.trim();
         if header_str.is_empty() {
             bail!("Data file header is empty");

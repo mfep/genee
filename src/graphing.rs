@@ -12,7 +12,7 @@ pub fn graph_last_n_days(data: &DiaryData, n: usize, max_width: usize) -> Result
     let from_day = today.checked_sub_signed(Duration::days(n as i64)).unwrap();
     let counts = datafile::calculate_data_counts(data, &from_day, &today);
     let rows = generate_rows(&data.header, &counts, max_width)?;
-    println!("Occurences in the last {} days:\n{}", n, rows);
+    println!("{}", rows);
     Ok(())
 }
 
@@ -29,7 +29,7 @@ fn generate_rows(names: &[String], counts: &[usize], max_width: usize) -> Result
     }
     let max_count = max_count.unwrap();
     for (name, &count) in names.iter().zip(counts.iter()) {
-        ret += &format!("{:<3}", Paint::blue(name).italic());
+        ret += &format!("{:<3.3}", Paint::blue(name).italic());
         ret += " ";
         let width = count * max_width / max_count;
         if width == 0 {
