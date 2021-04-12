@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use chrono::NaiveDate;
+use chrono::{Duration, NaiveDate};
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -67,6 +67,19 @@ pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate)
     return result;
 }
 
+pub fn calculate_data_counts_per_iter(
+    data: &DiaryData,
+    from: &NaiveDate,
+    period: usize,
+    iters: usize,
+) -> Vec<Vec<usize>> {
+    let periods = get_date_ranges(from, period, iters);
+    periods
+        .iter()
+        .map(|(start_date, end_date)| calculate_data_counts(data, end_date, start_date))
+        .collect()
+}
+
 pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[bool]) -> Result<()> {
     let header = read_header_only(path)?;
     if header.len() != new_data.len() {
@@ -86,8 +99,7 @@ pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[boo
 }
 
 pub fn serialize_to_csv(path: &PathBuf, data: &DiaryData) -> Result<()> {
-    let mut file = File::create(path)
-        .context("Could not open file for writing")?;
+    let mut file = File::create(path).context("Could not open file for writing")?;
     let header = data.header.join(&String::from(DELIMETER));
     writeln!(file, "date,{}", header)?;
     for row in &data.data {
@@ -111,7 +123,8 @@ fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
     reader
         .read_line(&mut header_line)
         .context("Cannot read first line of data file")?;
-    for header_str in header_line.split(DELIMETER).skip(1) { // skip 'date'
+    for header_str in header_line.split(DELIMETER).skip(1) {
+        // skip 'date'
         let header_str = header_str.trim();
         if header_str.is_empty() {
             bail!("Data file header is empty");
@@ -124,6 +137,77 @@ fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
 fn read_header_only(path: &PathBuf) -> Result<Vec<String>> {
     let mut reader = get_datafile_reader(path)?;
     read_header(&mut reader)
+}
+
+fn get_date_ranges(
+    from_date: &NaiveDate,
+    range_size: usize,
+    iters: usize,
+) -> Vec<(NaiveDate, NaiveDate)> {
+    let start_offsets = (0..range_size * iters).step_by(range_size);
+    let end_offsets = (range_size - 1..range_size * (iters + 1)).step_by(range_size);
+    start_offsets
+        .zip(end_offsets)
+        .map(|(start, end)| {
+            (
+                *from_date - Duration::days(start as i64),
+                *from_date - Duration::days(end as i64),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn test_calculate_data_counts_per_iter() {
+    let data = DiaryData {
+        header: vec![String::from("A"), String::from("B"), String::from("C")],
+        data: vec![
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 1),
+                data: vec![true, false, false],
+            },
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 2),
+                data: vec![true, false, false],
+            },
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 3),
+                data: vec![true, true, false],
+            },
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 4),
+                data: vec![true, true, true],
+            },
+            DiaryRow {
+                date: NaiveDate::from_ymd(2021, 1, 5),
+                data: vec![true, false, false],
+            },
+        ],
+    };
+    let result = calculate_data_counts_per_iter(&data, &NaiveDate::from_ymd(2021, 1, 5), 2, 3);
+    assert_eq!(vec![vec![2, 1, 1], vec![2, 1, 0], vec![1, 0, 0],], result);
+}
+
+#[test]
+fn test_get_date_ranges() {
+    let result = get_date_ranges(&NaiveDate::from_ymd(2000, 5, 30), 5, 3);
+    assert_eq!(
+        vec![
+            (
+                NaiveDate::from_ymd(2000, 5, 30),
+                NaiveDate::from_ymd(2000, 5, 26)
+            ),
+            (
+                NaiveDate::from_ymd(2000, 5, 25),
+                NaiveDate::from_ymd(2000, 5, 21)
+            ),
+            (
+                NaiveDate::from_ymd(2000, 5, 20),
+                NaiveDate::from_ymd(2000, 5, 16)
+            ),
+        ],
+        result
+    );
 }
 
 #[test]
