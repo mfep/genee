@@ -1,3 +1,5 @@
+//! Structures and functions related to parsing and processing
+//! CSV files that contain habit data
 use anyhow::{bail, Context, Result};
 use chrono::{Duration, NaiveDate};
 use std::fs::{File, OpenOptions};
@@ -5,21 +7,34 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+/// Delimeter character used in the CSV data files.
 pub const DELIMETER: char = ',';
+/// Format of the date string in the CSV data file.
+/// For example: 2020-01-25
 const DATE_FORMAT: &str = "%Y-%m-%d";
 
+/// A single entry in the data file.
 #[derive(Debug)]
 pub struct DiaryRow {
+    /// The day the data entry refers to.
     pub date: NaiveDate,
+
+    /// The habit data on that day. Each bool represents whether the activity
+    /// (with the same index in the containing `DiaryData`'s header) was done that day or not.
     pub data: Vec<bool>,
 }
 
+/// A complete in-memory representation of the data file.
 #[derive(Debug, Default)]
 pub struct DiaryData {
+    /// Header of the data file, containing the names/abbreviations of the tracked habits.
     pub header: Vec<String>,
+
+    /// Entries in the data file.
     pub data: Vec<DiaryRow>,
 }
 
+/// Tries to read data file to memory.
 pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
     let mut reader = get_datafile_reader(path)?;
     let mut data = DiaryData::default();
@@ -51,6 +66,8 @@ pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
     Ok(data)
 }
 
+/// Calculates the occurences of all habits in the prescribed date interval.
+/// Both limits are inclusive.
 pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate) -> Vec<usize> {
     let mut result: Vec<usize> = data.header.iter().map(|_| 0).collect();
     for row in data.data.iter().rev() {
@@ -67,6 +84,11 @@ pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate)
     return result;
 }
 
+/// Calculates the occurences of all habits over multiple periods of date ranges.
+/// For example when `period == 30`, `iters == 3` and `from` is today,
+/// the result is a 3-element vector the habit data in the last 30 days,
+/// the habit data between 60 and 30 days before today
+/// and the habit data between 90 and 60 days before today.
 pub fn calculate_data_counts_per_iter(
     data: &DiaryData,
     from: &NaiveDate,
@@ -80,6 +102,9 @@ pub fn calculate_data_counts_per_iter(
         .collect()
 }
 
+/// Appends a new data line to the end of the data file, without reading the whole data file.
+/// Checks the header of the data file, and if the header count does not match the new data count,
+/// an error is raised.
 pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[bool]) -> Result<()> {
     let header = read_header_only(path)?;
     if header.len() != new_data.len() {
@@ -98,6 +123,8 @@ pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[boo
     Ok(())
 }
 
+/// Tries to write a `DiaryData` instance to the disk at the specified path.
+/// This replaces any existing file (given the process has permission).
 pub fn serialize_to_csv(path: &PathBuf, data: &DiaryData) -> Result<()> {
     let mut file = File::create(path).context("Could not open file for writing")?;
     let header = data.header.join(&String::from(DELIMETER));

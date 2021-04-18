@@ -1,3 +1,4 @@
+//! Functions for displaying habit data on the terminal.
 use crate::datafile;
 use crate::datafile::DiaryData;
 use anyhow::{bail, Result};
@@ -12,6 +13,7 @@ const COLORS: &[Color] = &[
     Color::Red,
 ];
 
+/// Prints colored habit data sums to stdout.
 pub fn graph_last_n_days(
     data: &DiaryData,
     period: usize,
