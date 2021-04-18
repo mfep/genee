@@ -2,7 +2,6 @@ use anyhow::Result;
 use chrono::Local;
 use genee::datafile;
 use genee::graphing;
-use human_panic::setup_panic;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -24,16 +23,15 @@ struct Opt {
     width: usize,
 }
 
-fn main() {
-    setup_panic!();
+fn main() -> Result<()> {
     let opt = Opt::from_args();
     if opt.append.is_some() {
-        let append_bools = parse_appendee(&opt.append.unwrap()).unwrap();
-        datafile::append_data_to_datafile(&opt.file, &Local::today().naive_local(), &append_bools)
-            .unwrap();
+        let append_bools = parse_appendee(&opt.append.unwrap())?;
+        datafile::append_data_to_datafile(&opt.file, &Local::today().naive_local(), &append_bools)?;
     }
-    let data = datafile::parse_csv_to_diary_data(&opt.file).unwrap();
-    graphing::graph_last_n_days(&data, opt.graph_days, opt.past_periods, opt.width).unwrap();
+    let data = datafile::parse_csv_to_diary_data(&opt.file)?;
+    graphing::graph_last_n_days(&data, opt.graph_days, opt.past_periods, opt.width)?;
+    Ok(())
 }
 
 fn parse_appendee(appendee: &str) -> Result<Vec<bool>> {
