@@ -5,7 +5,7 @@ use chrono::{Duration, NaiveDate};
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::Path;
 
 /// Delimeter character used in the CSV data files.
 pub const DELIMETER: char = ',';
@@ -35,17 +35,18 @@ pub struct DiaryData {
 }
 
 /// Tries to read data file to memory.
-pub fn parse_csv_to_diary_data(path: &PathBuf) -> Result<DiaryData> {
+pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
     let mut reader = get_datafile_reader(path)?;
-    let mut data = DiaryData::default();
-
-    data.header = read_header(&mut reader)?;
+    let mut data = DiaryData {
+        header: read_header(&mut reader)?,
+        data: vec![],
+    };
     let mut last_date = NaiveDate::from_ymd(1, 1, 1);
     for (i, line) in reader.lines().enumerate() {
         let line = line.context("Cannot read data file")?;
         let mut splitted = line.split(DELIMETER);
         let date_str = splitted
-            .nth(0)
+            .next()
             .context("Date does not exist in data file")?;
         let current_date = NaiveDate::parse_from_str(date_str, DATE_FORMAT)
             .context(format!("Cannot parse date in data file: \"{}\"", date_str))?;
@@ -72,7 +73,7 @@ pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate)
     let mut result: Vec<usize> = data.header.iter().map(|_| 0).collect();
     for row in data.data.iter().rev() {
         let date = &row.date;
-        if date < &from || date > &to {
+        if date < from || date > to {
             continue;
         }
         for (i, &val) in row.data.iter().enumerate() {
@@ -81,7 +82,7 @@ pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate)
             }
         }
     }
-    return result;
+    result
 }
 
 /// Calculates the occurences of all habits over multiple periods of date ranges.
@@ -105,7 +106,7 @@ pub fn calculate_data_counts_per_iter(
 /// Appends a new data line to the end of the data file, without reading the whole data file.
 /// Checks the header of the data file, and if the header count does not match the new data count,
 /// an error is raised.
-pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[bool]) -> Result<()> {
+pub fn append_data_to_datafile(path: &Path, date: &NaiveDate, new_data: &[bool]) -> Result<()> {
     let header = read_header_only(path)?;
     if header.len() != new_data.len() {
         bail!("The provided additional data does not match the datafile header in size");
@@ -125,7 +126,7 @@ pub fn append_data_to_datafile(path: &PathBuf, date: &NaiveDate, new_data: &[boo
 
 /// Tries to write a `DiaryData` instance to the disk at the specified path.
 /// This replaces any existing file (given the process has permission).
-pub fn serialize_to_csv(path: &PathBuf, data: &DiaryData) -> Result<()> {
+pub fn serialize_to_csv(path: &Path, data: &DiaryData) -> Result<()> {
     let mut file = File::create(path).context("Could not open file for writing")?;
     let header = data.header.join(&String::from(DELIMETER));
     writeln!(file, "date,{}", header)?;
@@ -138,7 +139,7 @@ pub fn serialize_to_csv(path: &PathBuf, data: &DiaryData) -> Result<()> {
     Ok(())
 }
 
-fn get_datafile_reader(path: &PathBuf) -> Result<BufReader<File>> {
+fn get_datafile_reader(path: &Path) -> Result<BufReader<File>> {
     let csv_file = File::open(path).context(format!("Cannot open data file at {:?}", path))?;
     let reader = BufReader::new(csv_file);
     Ok(reader)
@@ -161,7 +162,7 @@ fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
     Ok(header_data)
 }
 
-fn read_header_only(path: &PathBuf) -> Result<Vec<String>> {
+fn read_header_only(path: &Path) -> Result<Vec<String>> {
     let mut reader = get_datafile_reader(path)?;
     read_header(&mut reader)
 }

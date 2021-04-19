@@ -22,13 +22,14 @@ struct Opt {
     cols: usize,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let opt = Opt::from_args();
-    let generated_data = generate_data(opt.cols, opt.rows).unwrap();
-    datafile::serialize_to_csv(&opt.file, &generated_data).unwrap();
+    let generated_data = generate_data(opt.cols, opt.rows);
+    datafile::serialize_to_csv(&opt.file, &generated_data)?;
+    Ok(())
 }
 
-fn generate_data(cols: usize, rows: usize) -> Result<DiaryData> {
+fn generate_data(cols: usize, rows: usize) -> DiaryData {
     let mut rng = rand::thread_rng();
     let mut header = vec![];
     for _col in 0..cols {
@@ -47,8 +48,8 @@ fn generate_data(cols: usize, rows: usize) -> Result<DiaryData> {
             data: row_data,
         });
     }
-    Ok(DiaryData {
-        header: header,
-        data: data,
-    })
+    DiaryData {
+        header,
+        data,
+    }
 }

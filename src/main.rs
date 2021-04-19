@@ -26,7 +26,7 @@ struct Opt {
 fn main() -> Result<()> {
     let opt = Opt::from_args();
     if opt.append.is_some() {
-        let append_bools = parse_appendee(&opt.append.unwrap())?;
+        let append_bools = parse_appendee(&opt.append.unwrap());
         datafile::append_data_to_datafile(&opt.file, &Local::today().naive_local(), &append_bools)?;
     }
     let data = datafile::parse_csv_to_diary_data(&opt.file)?;
@@ -34,9 +34,9 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse_appendee(appendee: &str) -> Result<Vec<bool>> {
-    Ok(appendee
+fn parse_appendee(appendee: &str) -> Vec<bool> {
+    appendee
         .split(datafile::DELIMETER)
         .map(|s| !s.is_empty())
-        .collect())
+        .collect()
 }
