@@ -48,8 +48,5 @@ fn generate_data(cols: usize, rows: usize) -> DiaryData {
             data: row_data,
         });
     }
-    DiaryData {
-        header,
-        data,
-    }
+    DiaryData { header, data }
 }
