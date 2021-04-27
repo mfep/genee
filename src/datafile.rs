@@ -40,7 +40,10 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
         let current_date = NaiveDate::parse_from_str(date_str, DATE_FORMAT)
             .context(format!("Cannot parse date in data file: \"{}\"", date_str))?;
         if data.data.contains_key(&current_date) {
-            bail!(format!("Data file contains duplicated date at line {}. Please fix manually!", i + 2));
+            bail!(format!(
+                "Data file contains duplicated date at line {}. Please fix manually!",
+                i + 2
+            ));
         }
         let mut row_data = vec![];
         for part in splitted {
@@ -92,13 +95,17 @@ pub enum SuccessfulUpdate {
     ReplacedExisting(Vec<bool>),
 }
 
-pub fn update_data(data: &mut DiaryData, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate> {
+pub fn update_data(
+    data: &mut DiaryData,
+    date: &NaiveDate,
+    new_row: &[bool],
+) -> Result<SuccessfulUpdate> {
     if data.header.len() != new_row.len() {
         bail!("The provided update row does not match the datafile header in size");
     }
     match data.data.insert(*date, new_row.to_vec()) {
         Some(replaced_row) => Ok(SuccessfulUpdate::ReplacedExisting(replaced_row)),
-        None => Ok(SuccessfulUpdate::AddedNew)
+        None => Ok(SuccessfulUpdate::AddedNew),
     }
 }
 

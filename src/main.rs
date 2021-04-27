@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use chrono::Local;
+use chrono::NaiveDate;
 use genee::datafile;
 use genee::graphing;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use chrono::NaiveDate;
 
 #[derive(StructOpt)]
 struct Opt {
@@ -36,7 +36,10 @@ fn main() -> Result<()> {
         match datafile::update_data(&mut data, &append_date, &append_bools)? {
             datafile::SuccessfulUpdate::AddedNew => (),
             datafile::SuccessfulUpdate::ReplacedExisting(existing_row) => {
-                println!("Updating row in datafile: {}", datafile::serialize_row(&append_date, &existing_row))
+                println!(
+                    "Updating row in datafile: {}",
+                    datafile::serialize_row(&append_date, &existing_row)
+                )
             }
         }
         datafile::serialize_to_csv(&opt.file, &data)?;
@@ -54,10 +57,12 @@ fn parse_appendee(appendee: &str) -> Vec<bool> {
 
 fn get_append_date(input_date: &Option<String>) -> Result<NaiveDate> {
     match input_date {
-        Some(date_string) => {
-            Ok(NaiveDate::parse_from_str(&date_string, datafile::DATE_FORMAT)
-                .context(format!("Could not parse input data string \"{}\"", date_string))?)
-        }
-        None => Ok(Local::today().naive_local())
+        Some(date_string) => Ok(
+            NaiveDate::parse_from_str(&date_string, datafile::DATE_FORMAT).context(format!(
+                "Could not parse input data string \"{}\"",
+                date_string
+            ))?,
+        ),
+        None => Ok(Local::today().naive_local()),
     }
 }
