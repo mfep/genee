@@ -3,7 +3,7 @@
 use anyhow::{bail, Context, Result};
 use chrono::{Duration, NaiveDate};
 use std::collections::BTreeMap;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
@@ -12,7 +12,7 @@ use std::path::Path;
 pub const DELIMETER: char = ',';
 /// Format of the date string in the CSV data file.
 /// For example: 2020-01-25
-const DATE_FORMAT: &str = "%Y-%m-%d";
+pub const DATE_FORMAT: &str = "%Y-%m-%d";
 
 /// A complete in-memory representation of the data file.
 #[derive(Debug, Default)]
@@ -31,7 +31,6 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
         header: read_header(&mut reader)?,
         data: BTreeMap::default(),
     };
-    let mut last_date = NaiveDate::from_ymd(1, 1, 1);
     for (i, line) in reader.lines().enumerate() {
         let line = line.context("Cannot read data file")?;
         let mut splitted = line.split(DELIMETER);
@@ -40,10 +39,9 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
             .context("Date does not exist in data file")?;
         let current_date = NaiveDate::parse_from_str(date_str, DATE_FORMAT)
             .context(format!("Cannot parse date in data file: \"{}\"", date_str))?;
-        if current_date <= last_date {
-            bail!(format!("Corrupt datestamp in datafile at line {}", i + 2));
+        if data.data.contains_key(&current_date) {
+            bail!(format!("Data file contains duplicated date at line {}. Please fix manually!", i + 2));
         }
-        last_date = current_date;
         let mut row_data = vec![];
         for part in splitted {
             let part = part.trim();
@@ -89,25 +87,19 @@ pub fn calculate_data_counts_per_iter(
         .collect()
 }
 
-/// Appends a new data line to the end of the data file, without reading the whole data file.
-/// Checks the header of the data file, and if the header count does not match the new data count,
-/// an error is raised.
-pub fn append_data_to_datafile(path: &Path, date: &NaiveDate, new_data: &[bool]) -> Result<()> {
-    let header = read_header_only(path)?;
-    if header.len() != new_data.len() {
-        bail!("The provided additional data does not match the datafile header in size");
+pub enum SuccessfulUpdate {
+    AddedNew,
+    ReplacedExisting(Vec<bool>),
+}
+
+pub fn update_data(data: &mut DiaryData, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate> {
+    if data.header.len() != new_row.len() {
+        bail!("The provided update row does not match the datafile header in size");
     }
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(path)
-        .context("Could not open datafile for writing")?;
-    let date_string = date.format(DATE_FORMAT);
-    let content: Vec<&str> = new_data.iter().map(|&x| if x { "x" } else { "" }).collect();
-    let content = content.join(&String::from(DELIMETER));
-    writeln!(file, "{}{}{}", date_string, DELIMETER, content)
-        .context("Could not append to datafile")?;
-    Ok(())
+    match data.data.insert(*date, new_row.to_vec()) {
+        Some(replaced_row) => Ok(SuccessfulUpdate::ReplacedExisting(replaced_row)),
+        None => Ok(SuccessfulUpdate::AddedNew)
+    }
 }
 
 /// Tries to write a `DiaryData` instance to the disk at the specified path.
@@ -117,12 +109,16 @@ pub fn serialize_to_csv(path: &Path, data: &DiaryData) -> Result<()> {
     let header = data.header.join(&String::from(DELIMETER));
     writeln!(file, "date,{}", header)?;
     for (date, data) in &data.data {
-        let formatted_date = date.format(DATE_FORMAT);
-        let content: Vec<&str> = data.iter().map(|&x| if x { "x" } else { "" }).collect();
-        let joined_content = content.join(&String::from(DELIMETER));
-        writeln!(file, "{}{}{}", formatted_date, DELIMETER, joined_content)?;
+        writeln!(file, "{}", serialize_row(date, data))?;
     }
     Ok(())
+}
+
+pub fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
+    let formatted_date = date.format(DATE_FORMAT);
+    let content: Vec<&str> = data.iter().map(|&x| if x { "x" } else { "" }).collect();
+    let joined_content = content.join(&String::from(DELIMETER));
+    format!("{}{}{}", formatted_date, DELIMETER, joined_content)
 }
 
 fn get_datafile_reader(path: &Path) -> Result<BufReader<File>> {
@@ -146,11 +142,6 @@ fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
         header_data.push(String::from(header_str));
     }
     Ok(header_data)
-}
-
-fn read_header_only(path: &Path) -> Result<Vec<String>> {
-    let mut reader = get_datafile_reader(path)?;
-    read_header(&mut reader)
 }
 
 fn get_date_ranges(
