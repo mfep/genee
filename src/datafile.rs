@@ -2,6 +2,7 @@
 //! CSV files that contain habit data
 use anyhow::{bail, Context, Result};
 use chrono::{Duration, NaiveDate};
+use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -13,17 +14,6 @@ pub const DELIMETER: char = ',';
 /// For example: 2020-01-25
 const DATE_FORMAT: &str = "%Y-%m-%d";
 
-/// A single entry in the data file.
-#[derive(Debug)]
-pub struct DiaryRow {
-    /// The day the data entry refers to.
-    pub date: NaiveDate,
-
-    /// The habit data on that day. Each bool represents whether the activity
-    /// (with the same index in the containing `DiaryData`'s header) was done that day or not.
-    pub data: Vec<bool>,
-}
-
 /// A complete in-memory representation of the data file.
 #[derive(Debug, Default)]
 pub struct DiaryData {
@@ -31,7 +21,7 @@ pub struct DiaryData {
     pub header: Vec<String>,
 
     /// Entries in the data file.
-    pub data: Vec<DiaryRow>,
+    pub data: BTreeMap<NaiveDate, Vec<bool>>,
 }
 
 /// Tries to read data file to memory.
@@ -39,7 +29,7 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
     let mut reader = get_datafile_reader(path)?;
     let mut data = DiaryData {
         header: read_header(&mut reader)?,
-        data: vec![],
+        data: BTreeMap::default(),
     };
     let mut last_date = NaiveDate::from_ymd(1, 1, 1);
     for (i, line) in reader.lines().enumerate() {
@@ -54,15 +44,12 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
             bail!(format!("Corrupt datestamp in datafile at line {}", i + 2));
         }
         last_date = current_date;
-        let mut row = DiaryRow {
-            date: current_date,
-            data: vec![],
-        };
+        let mut row_data = vec![];
         for part in splitted {
             let part = part.trim();
-            row.data.push(!part.is_empty());
+            row_data.push(!part.is_empty());
         }
-        data.data.push(row);
+        data.data.insert(current_date, row_data);
     }
     Ok(data)
 }
@@ -71,12 +58,11 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
 /// Both limits are inclusive.
 pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate) -> Vec<usize> {
     let mut result: Vec<usize> = data.header.iter().map(|_| 0).collect();
-    for row in data.data.iter().rev() {
-        let date = &row.date;
+    for (date, data) in data.data.iter().rev() {
         if date < from || date > to {
             continue;
         }
-        for (i, &val) in row.data.iter().enumerate() {
+        for (i, &val) in data.iter().enumerate() {
             if val {
                 result[i] += 1;
             }
@@ -130,11 +116,11 @@ pub fn serialize_to_csv(path: &Path, data: &DiaryData) -> Result<()> {
     let mut file = File::create(path).context("Could not open file for writing")?;
     let header = data.header.join(&String::from(DELIMETER));
     writeln!(file, "date,{}", header)?;
-    for row in &data.data {
-        let date = row.date.format(DATE_FORMAT);
-        let content: Vec<&str> = row.data.iter().map(|&x| if x { "x" } else { "" }).collect();
+    for (date, data) in &data.data {
+        let formatted_date = date.format(DATE_FORMAT);
+        let content: Vec<&str> = data.iter().map(|&x| if x { "x" } else { "" }).collect();
         let joined_content = content.join(&String::from(DELIMETER));
-        writeln!(file, "{}{}{}", date, DELIMETER, joined_content)?;
+        writeln!(file, "{}{}{}", formatted_date, DELIMETER, joined_content)?;
     }
     Ok(())
 }
@@ -187,31 +173,20 @@ fn get_date_ranges(
 
 #[test]
 fn test_calculate_data_counts_per_iter() {
-    let data = DiaryData {
+    let mut data = DiaryData {
         header: vec![String::from("A"), String::from("B"), String::from("C")],
-        data: vec![
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 1),
-                data: vec![true, false, false],
-            },
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 2),
-                data: vec![true, false, false],
-            },
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 3),
-                data: vec![true, true, false],
-            },
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 4),
-                data: vec![true, true, true],
-            },
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 5),
-                data: vec![true, false, false],
-            },
-        ],
+        data: BTreeMap::default(),
     };
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 1), vec![true, false, false]);
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 2), vec![true, false, false]);
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 3), vec![true, true, false]);
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 4), vec![true, true, true]);
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 5), vec![true, false, false]);
     let result = calculate_data_counts_per_iter(&data, &NaiveDate::from_ymd(2021, 1, 5), 2, 3);
     assert_eq!(vec![vec![2, 1, 1], vec![2, 1, 0], vec![1, 0, 0],], result);
 }
@@ -240,31 +215,20 @@ fn test_get_date_ranges() {
 
 #[test]
 fn test_calculate_data_counts() {
-    let data = DiaryData {
+    let mut data = DiaryData {
         header: vec![String::from("A"), String::from("B"), String::from("C")],
-        data: vec![
-            DiaryRow {
-                date: NaiveDate::from_ymd(2020, 1, 1),
-                data: vec![true, false, false],
-            },
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 1),
-                data: vec![true, false, false],
-            },
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 2),
-                data: vec![true, true, false],
-            },
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 3),
-                data: vec![true, true, true],
-            },
-            DiaryRow {
-                date: NaiveDate::from_ymd(2021, 1, 4),
-                data: vec![true, false, false],
-            },
-        ],
+        data: BTreeMap::default(),
     };
+    data.data
+        .insert(NaiveDate::from_ymd(2020, 1, 1), vec![true, false, false]);
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 1), vec![true, false, false]);
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 2), vec![true, true, false]);
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 3), vec![true, true, true]);
+    data.data
+        .insert(NaiveDate::from_ymd(2021, 1, 4), vec![true, false, false]);
     let result = calculate_data_counts(
         &data,
         &NaiveDate::from_ymd(2020, 8, 5),

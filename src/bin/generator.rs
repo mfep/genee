@@ -1,9 +1,10 @@
 use anyhow::Result;
 use chrono::{Duration, Local};
 use genee::datafile;
-use genee::datafile::{DiaryData, DiaryRow};
+use genee::datafile::DiaryData;
 use rand::prelude::*;
 use std::char;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -36,17 +37,14 @@ fn generate_data(cols: usize, rows: usize) -> DiaryData {
         let rand_char = A_IDX + rng.next_u32() % (Z_IDX - A_IDX);
         header.push(String::from(char::from_u32(rand_char).unwrap()));
     }
-    let mut data = vec![];
+    let mut data = BTreeMap::default();
     for row in 0..rows {
         let mut row_data = vec![];
         for _col in 0..cols {
             row_data.push(rng.gen_bool(0.5));
         }
         let date = Local::now().naive_local() + Duration::days(1 + row as i64 - rows as i64);
-        data.push(DiaryRow {
-            date: date.date(),
-            data: row_data,
-        });
+        data.insert(date.date(), row_data);
     }
     DiaryData { header, data }
 }
