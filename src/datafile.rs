@@ -90,11 +90,17 @@ pub fn calculate_data_counts_per_iter(
         .collect()
 }
 
+/// Result of an update to a `DiaryData` instance.
 pub enum SuccessfulUpdate {
+    /// The new date was not present in the instance, but it was added.
     AddedNew,
+
+    /// The date was already present in the instance, but was replaced.
+    /// This element contains the original data row.
     ReplacedExisting(Vec<bool>),
 }
 
+/// Modifies the provided `DiaryData` instance with the provided data row and date.
 pub fn update_data(
     data: &mut DiaryData,
     date: &NaiveDate,
@@ -121,6 +127,7 @@ pub fn serialize_to_csv(path: &Path, data: &DiaryData) -> Result<()> {
     Ok(())
 }
 
+/// Formats a data row with a date to `String`.
 pub fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
     let formatted_date = date.format(DATE_FORMAT);
     let content: Vec<&str> = data.iter().map(|&x| if x { "x" } else { "" }).collect();
