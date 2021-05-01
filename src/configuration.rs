@@ -1,6 +1,5 @@
 //! Utilities to store settings persistently on the disk.
 use anyhow::{Context, Result};
-use confy;
 use directories_next::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
