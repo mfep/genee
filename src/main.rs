@@ -86,9 +86,7 @@ fn get_append_date(input_date: &Option<String>) -> Result<NaiveDate> {
     }
 }
 
-fn merge_cli_and_persistent_options(
-    persistent_config: &configuration::Config,
-) -> CliOptions {
+fn merge_cli_and_persistent_options(persistent_config: &configuration::Config) -> CliOptions {
     let options_from_cli = CliOptions::from_args();
     CliOptions {
         file: options_from_cli
