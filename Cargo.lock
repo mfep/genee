@@ -142,6 +142,7 @@ dependencies = [
  "rand",
  "serde",
  "structopt",
+ "toml",
  "yansi",
 ]
 

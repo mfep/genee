@@ -40,6 +40,21 @@ pub fn load_config() -> Result<Config> {
     confy::load_path(get_config_path()).context("Could not load configuration file")
 }
 
+pub fn save_config(config: &Config) -> Result<()> {
+    Ok(confy::store_path(get_config_path(), config)?)
+}
+
+pub fn pretty_print_config(config: &Config) -> Result<String> {
+    Ok(toml::to_string_pretty(config)?)
+}
+
+pub fn get_config_path() -> PathBuf {
+    let mut config_dir = get_project_dirs().config_dir().to_path_buf();
+    config_dir.set_file_name("genee-config");
+    config_dir.set_extension("toml");
+    config_dir
+}
+
 fn get_project_dirs() -> ProjectDirs {
     let project_dirs = ProjectDirs::from(QUALIFIER_ID, ORG_ID, APP_ID);
     if project_dirs.is_none() {
@@ -53,12 +68,4 @@ fn get_default_datafile_path() -> PathBuf {
     data_dir.set_file_name("genee-data");
     data_dir.set_extension("csv");
     data_dir
-}
-
-fn get_config_path() -> PathBuf {
-    let mut config_dir = get_project_dirs().config_dir().to_path_buf();
-    config_dir.set_file_name("genee-config");
-    config_dir.set_extension("toml");
-    println!("{:?}", config_dir);
-    config_dir
 }
