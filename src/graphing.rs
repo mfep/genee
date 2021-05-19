@@ -2,7 +2,7 @@
 use crate::datafile;
 use crate::datafile::DiaryData;
 use anyhow::{bail, Result};
-use chrono::Local;
+use chrono::{Local, NaiveDate};
 use yansi::{Color, Paint};
 
 const COLORS: &[Color] = &[
@@ -24,9 +24,10 @@ pub fn graph_last_n_days(
         bail!("Graph height must be at least 10");
     }
     let today = Local::today().naive_local();
-    let count_vectors = datafile::calculate_data_counts_per_iter(data, &today, period, iters);
+    let date_ranges = datafile::get_date_ranges(&today, period, iters);
+    let count_vectors = datafile::calculate_data_counts_per_iter(data, &date_ranges);
     let rows = generate_rows(&data.header, &count_vectors, max_width)?;
-    println!("{}", rows);
+    println!("{}{}", format_ranges(&date_ranges, max_width), rows);
     Ok(())
 }
 
@@ -73,4 +74,23 @@ fn generate_rows(
         }
     }
     Ok(ret)
+}
+
+fn format_ranges(date_ranges: &[(NaiveDate, NaiveDate)], max_width: usize) -> String {
+    let mut ret = String::new();
+    let mut current_line_length: usize = 0;
+    for (index, (range_start, range_end)) in date_ranges.iter().enumerate() {
+        let color = COLORS[index % COLORS.len()];
+        let range_start = range_start.format(datafile::DATE_FORMAT);
+        let range_end = range_end.format(datafile::DATE_FORMAT);
+        let formatted_range = format!("{}→{}\t", range_start, range_end);
+        if current_line_length > max_width {
+            ret += "\n";
+            current_line_length = 0;
+        }
+        ret += &Paint::new(&formatted_range).fg(color).to_string();
+        current_line_length += formatted_range.len();
+    }
+    ret += "\n";
+    ret
 }

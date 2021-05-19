@@ -79,19 +79,34 @@ pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate)
     result
 }
 
+/// Calculates the date ranges according to the parameters.
+/// For example when `range_size == 30`, `iters == 3` and `from_date` is today,
+/// the result is a 3-element vector containing ranges of the last 30 days,
+/// the 30 days before that, and the 30 days before the latter one.
+pub fn get_date_ranges(
+    from_date: &NaiveDate,
+    range_size: usize,
+    iters: usize,
+) -> Vec<(NaiveDate, NaiveDate)> {
+    let start_offsets = (0..range_size * iters).step_by(range_size);
+    let end_offsets = (range_size - 1..range_size * (iters + 1)).step_by(range_size);
+    start_offsets
+        .zip(end_offsets)
+        .map(|(start, end)| {
+            (
+                *from_date - Duration::days(start as i64),
+                *from_date - Duration::days(end as i64),
+            )
+        })
+        .collect()
+}
+
 /// Calculates the occurences of all habits over multiple periods of date ranges.
-/// For example when `period == 30`, `iters == 3` and `from` is today,
-/// the result is a 3-element vector the habit data in the last 30 days,
-/// the habit data between 60 and 30 days before today
-/// and the habit data between 90 and 60 days before today.
 pub fn calculate_data_counts_per_iter(
     data: &DiaryData,
-    from: &NaiveDate,
-    period: usize,
-    iters: usize,
+    date_ranges: &[(NaiveDate, NaiveDate)],
 ) -> Vec<Vec<usize>> {
-    let periods = get_date_ranges(from, period, iters);
-    periods
+    date_ranges
         .iter()
         .map(|(start_date, end_date)| calculate_data_counts(data, end_date, start_date))
         .collect()
@@ -165,24 +180,6 @@ fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
     Ok(header_data)
 }
 
-fn get_date_ranges(
-    from_date: &NaiveDate,
-    range_size: usize,
-    iters: usize,
-) -> Vec<(NaiveDate, NaiveDate)> {
-    let start_offsets = (0..range_size * iters).step_by(range_size);
-    let end_offsets = (range_size - 1..range_size * (iters + 1)).step_by(range_size);
-    start_offsets
-        .zip(end_offsets)
-        .map(|(start, end)| {
-            (
-                *from_date - Duration::days(start as i64),
-                *from_date - Duration::days(end as i64),
-            )
-        })
-        .collect()
-}
-
 #[test]
 fn test_calculate_data_counts_per_iter() {
     let mut data = DiaryData {
@@ -199,7 +196,8 @@ fn test_calculate_data_counts_per_iter() {
         .insert(NaiveDate::from_ymd(2021, 1, 4), vec![true, true, true]);
     data.data
         .insert(NaiveDate::from_ymd(2021, 1, 5), vec![true, false, false]);
-    let result = calculate_data_counts_per_iter(&data, &NaiveDate::from_ymd(2021, 1, 5), 2, 3);
+    let ranges = get_date_ranges(&NaiveDate::from_ymd(2021, 1, 5), 2, 3);
+    let result = calculate_data_counts_per_iter(&data, &ranges);
     assert_eq!(vec![vec![2, 1, 1], vec![2, 1, 0], vec![1, 0, 0],], result);
 }
 
