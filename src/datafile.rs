@@ -50,6 +50,13 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
             let part = part.trim();
             row_data.push(!part.is_empty());
         }
+        if row_data.len() != data.header.len() {
+            bail!(format!(
+                "Number of entries ({}) on line {} in datafile does not match number of entries in the header ({})",
+                row_data.len(),
+                i + 2,
+                data.header.len()));
+        }
         data.data.insert(current_date, row_data);
     }
     Ok(data)
