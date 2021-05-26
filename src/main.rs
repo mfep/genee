@@ -42,11 +42,12 @@ fn main() -> Result<()> {
     }
     if opt.list_config {
         pretty_print_config()?;
+        return Ok(());
     }
     let mut data = datafile::parse_csv_to_diary_data(&opt.file.as_ref().unwrap())?;
+    let append_date = get_append_date(&opt.date_to_append)?;
     if opt.append.is_some() {
         let append_bools = parse_appendee(&opt.append.unwrap());
-        let append_date = get_append_date(&opt.date_to_append)?;
         match datafile::update_data(&mut data, &append_date, &append_bools)? {
             datafile::SuccessfulUpdate::AddedNew => (),
             datafile::SuccessfulUpdate::ReplacedExisting(existing_row) => {
@@ -60,6 +61,7 @@ fn main() -> Result<()> {
     }
     graphing::graph_last_n_days(
         &data,
+        &append_date,
         opt.graph_days.unwrap(),
         opt.past_periods.unwrap(),
         opt.max_displayed_cols.unwrap(),

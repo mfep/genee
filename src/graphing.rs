@@ -2,7 +2,7 @@
 use crate::datafile;
 use crate::datafile::DiaryData;
 use anyhow::{bail, Result};
-use chrono::{Local, NaiveDate};
+use chrono::NaiveDate;
 use yansi::{Color, Paint};
 
 const COLORS: &[Color] = &[
@@ -16,6 +16,7 @@ const COLORS: &[Color] = &[
 /// Prints colored habit data sums to stdout.
 pub fn graph_last_n_days(
     data: &DiaryData,
+    last_date: &NaiveDate,
     period: usize,
     iters: usize,
     max_width: usize,
@@ -23,8 +24,7 @@ pub fn graph_last_n_days(
     if max_width < 10 {
         bail!("Graph height must be at least 10");
     }
-    let today = Local::today().naive_local();
-    let date_ranges = datafile::get_date_ranges(&today, period, iters);
+    let date_ranges = datafile::get_date_ranges(last_date, period, iters);
     let count_vectors = datafile::calculate_data_counts_per_iter(data, &date_ranges);
     let rows = generate_rows(&data.header, &count_vectors, max_width)?;
     println!("{}{}", format_ranges(&date_ranges, max_width), rows);
