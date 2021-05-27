@@ -3,6 +3,7 @@ use crate::datafile;
 use crate::datafile::DiaryData;
 use anyhow::{bail, Result};
 use chrono::NaiveDate;
+use std::io;
 use yansi::{Color, Paint};
 
 const COLORS: &[Color] = &[
@@ -29,6 +30,22 @@ pub fn graph_last_n_days(
     let rows = generate_rows(&data.header, &count_vectors, max_width)?;
     println!("{}{}", format_ranges(&date_ranges, max_width), rows);
     Ok(())
+}
+
+pub fn input_data_interactively(date: &NaiveDate, headers: &[String]) -> Vec<bool> {
+    println!(
+        "Enter habit data for date {}",
+        date.format(datafile::DATE_FORMAT)
+    );
+    headers
+        .iter()
+        .map(|header| {
+            println!("{} ?", header);
+            let mut line = String::new();
+            let _count = io::stdin().read_line(&mut line);
+            !line.trim().is_empty()
+        })
+        .collect()
 }
 
 fn generate_rows(

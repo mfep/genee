@@ -16,7 +16,7 @@ struct CliOptions {
     graph_days: Option<usize>,
 
     #[structopt(short, long)]
-    append: Option<String>,
+    append: bool,
 
     #[structopt(short, long)]
     date_to_append: Option<String>,
@@ -46,14 +46,19 @@ fn main() -> Result<()> {
     }
     let mut data = datafile::parse_csv_to_diary_data(&opt.file.as_ref().unwrap())?;
     let append_date = get_append_date(&opt.date_to_append)?;
-    if opt.append.is_some() {
-        let append_bools = parse_appendee(&opt.append.unwrap());
+    if opt.append {
+        let append_bools = graphing::input_data_interactively(&append_date, &data.header);
         match datafile::update_data(&mut data, &append_date, &append_bools)? {
-            datafile::SuccessfulUpdate::AddedNew => (),
-            datafile::SuccessfulUpdate::ReplacedExisting(existing_row) => {
+            datafile::SuccessfulUpdate::AddedNew => {
                 println!(
-                    "Updating row in datafile: {}",
-                    datafile::serialize_row(&append_date, &existing_row)
+                    "Adding new row to datafile: {}",
+                    datafile::serialize_row(&append_date, &append_bools)
+                )
+            }
+            datafile::SuccessfulUpdate::ReplacedExisting(_existing_row) => {
+                println!(
+                    "Updated row in datafile: {}",
+                    datafile::serialize_row(&append_date, &append_bools)
                 )
             }
         }
@@ -67,13 +72,6 @@ fn main() -> Result<()> {
         opt.max_displayed_cols.unwrap(),
     )?;
     Ok(())
-}
-
-fn parse_appendee(appendee: &str) -> Vec<bool> {
-    appendee
-        .split(datafile::DELIMETER)
-        .map(|s| !s.is_empty())
-        .collect()
 }
 
 fn get_append_date(input_date: &Option<String>) -> Result<NaiveDate> {
