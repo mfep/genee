@@ -157,6 +157,25 @@ pub fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
     format!("{}{}{}", formatted_date, DELIMETER, joined_content)
 }
 
+/// Returns a vector of missing dates between the first date in the database until specified date.
+pub fn get_missing_dates(data: &DiaryData, until: &NaiveDate) -> Result<Vec<NaiveDate>> {
+    if data.data.is_empty() {
+        bail!("Data file is empty");
+    }
+    let (first_date, _) = data.data.iter().next().unwrap();
+    let mut result = vec![];
+    let mut date_to_check = *first_date;
+    while date_to_check <= *until {
+        if !data.data.contains_key(&date_to_check) {
+            result.push(date_to_check);
+        }
+        date_to_check = date_to_check
+            .checked_add_signed(chrono::Duration::days(1))
+            .unwrap();
+    }
+    Ok(result)
+}
+
 fn get_datafile_reader(path: &Path) -> Result<BufReader<File>> {
     let csv_file = File::open(path).context(format!("Cannot open data file at {:?}", path))?;
     let reader = BufReader::new(csv_file);

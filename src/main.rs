@@ -46,28 +46,34 @@ fn main() -> Result<()> {
         return Ok(());
     }
     let mut data = datafile::parse_csv_to_diary_data(&opt.file.as_ref().unwrap())?;
-    let append_date = get_append_date(&opt.date_to_append)?;
+    let spec_date = get_append_date(&opt.date_to_append)?;
     if opt.append {
-        let append_bools = input_data_interactively(&append_date, &data.header);
-        match datafile::update_data(&mut data, &append_date, &append_bools)? {
-            datafile::SuccessfulUpdate::AddedNew => {
-                println!(
-                    "Adding new row to datafile: {}",
-                    datafile::serialize_row(&append_date, &append_bools)
-                )
-            }
-            datafile::SuccessfulUpdate::ReplacedExisting(_existing_row) => {
-                println!(
-                    "Updated row in datafile: {}",
-                    datafile::serialize_row(&append_date, &append_bools)
-                )
+        let mut appended_dates = vec![spec_date];
+        if opt.date_to_append.is_none() {
+            appended_dates = datafile::get_missing_dates(&data, &spec_date)?;
+        }
+        for date in appended_dates {
+            let append_bools = input_data_interactively(&date, &data.header);
+            match datafile::update_data(&mut data, &date, &append_bools)? {
+                datafile::SuccessfulUpdate::AddedNew => {
+                    println!(
+                        "Adding new row to datafile: {}",
+                        datafile::serialize_row(&date, &append_bools)
+                    )
+                }
+                datafile::SuccessfulUpdate::ReplacedExisting(_existing_row) => {
+                    println!(
+                        "Updated row in datafile: {}",
+                        datafile::serialize_row(&date, &append_bools)
+                    )
+                }
             }
         }
         datafile::serialize_to_csv(&opt.file.unwrap(), &data)?;
     }
     graphing::graph_last_n_days(
         &data,
-        &append_date,
+        &spec_date,
         opt.graph_days.unwrap(),
         opt.past_periods.unwrap(),
         opt.max_displayed_cols.unwrap(),
