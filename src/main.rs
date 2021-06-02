@@ -4,6 +4,7 @@ use chrono::NaiveDate;
 use genee::configuration;
 use genee::datafile;
 use genee::graphing;
+use std::io;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -47,7 +48,7 @@ fn main() -> Result<()> {
     let mut data = datafile::parse_csv_to_diary_data(&opt.file.as_ref().unwrap())?;
     let append_date = get_append_date(&opt.date_to_append)?;
     if opt.append {
-        let append_bools = graphing::input_data_interactively(&append_date, &data.header);
+        let append_bools = input_data_interactively(&append_date, &data.header);
         match datafile::update_data(&mut data, &append_date, &append_bools)? {
             datafile::SuccessfulUpdate::AddedNew => {
                 println!(
@@ -125,4 +126,20 @@ fn save_config(opt: &CliOptions) -> Result<()> {
     configuration::save_config(&updated_config)?;
     println!("Successfully updated persistent configuration");
     Ok(())
+}
+
+fn input_data_interactively(date: &NaiveDate, headers: &[String]) -> Vec<bool> {
+    println!(
+        "Enter habit data for date {}",
+        date.format(datafile::DATE_FORMAT)
+    );
+    headers
+        .iter()
+        .map(|header| {
+            println!("{} ?", header);
+            let mut line = String::new();
+            let _count = io::stdin().read_line(&mut line);
+            !line.trim().is_empty()
+        })
+        .collect()
 }
