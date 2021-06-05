@@ -158,13 +158,17 @@ pub fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
 }
 
 /// Returns a vector of missing dates between the first date in the database until specified date.
-pub fn get_missing_dates(data: &DiaryData, until: &NaiveDate) -> Result<Vec<NaiveDate>> {
+pub fn get_missing_dates(
+    data: &DiaryData,
+    from: &Option<NaiveDate>,
+    until: &NaiveDate,
+) -> Result<Vec<NaiveDate>> {
     if data.data.is_empty() {
         bail!("Data file is empty");
     }
-    let (first_date, _) = data.data.iter().next().unwrap();
+    let first_date = from.unwrap_or_else(|| *data.data.iter().next().unwrap().0);
     let mut result = vec![];
-    let mut date_to_check = *first_date;
+    let mut date_to_check = first_date;
     while date_to_check <= *until {
         if !data.data.contains_key(&date_to_check) {
             result.push(date_to_check);

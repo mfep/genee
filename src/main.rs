@@ -3,6 +3,7 @@ use chrono::Local;
 use chrono::NaiveDate;
 use genee::configuration;
 use genee::datafile;
+use genee::datafile::DiaryData;
 use genee::graphing;
 use std::io;
 use std::path::PathBuf;
@@ -11,16 +12,16 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 struct CliOptions {
     #[structopt(short, long, parse(from_os_str))]
-    file: Option<PathBuf>,
+    datafile: Option<PathBuf>,
 
     #[structopt(short, long)]
     graph_days: Option<usize>,
 
     #[structopt(short, long)]
-    append: bool,
+    fill: bool,
 
     #[structopt(short, long)]
-    date_to_append: Option<String>,
+    append_date: Option<String>,
 
     #[structopt(short, long)]
     past_periods: Option<usize>,
@@ -45,35 +46,26 @@ fn main() -> Result<()> {
         pretty_print_config()?;
         return Ok(());
     }
-    let mut data = datafile::parse_csv_to_diary_data(&opt.file.as_ref().unwrap())?;
-    let spec_date = get_append_date(&opt.date_to_append)?;
-    if opt.append {
-        let mut appended_dates = vec![spec_date];
-        if opt.date_to_append.is_none() {
-            appended_dates = datafile::get_missing_dates(&data, &spec_date)?;
-        }
+    let mut data = datafile::parse_csv_to_diary_data(&opt.datafile.as_ref().unwrap())?;
+    let append_date = get_append_date(&opt.append_date)?;
+    let graph_date: NaiveDate;
+    if opt.fill {
+        graph_date = yesterday();
+        let appended_dates = datafile::get_missing_dates(&data, &append_date, &graph_date)?;
         for date in appended_dates {
-            let append_bools = input_data_interactively(&date, &data.header);
-            match datafile::update_data(&mut data, &date, &append_bools)? {
-                datafile::SuccessfulUpdate::AddedNew => {
-                    println!(
-                        "Adding new row to datafile: {}",
-                        datafile::serialize_row(&date, &append_bools)
-                    )
-                }
-                datafile::SuccessfulUpdate::ReplacedExisting(_existing_row) => {
-                    println!(
-                        "Updated row in datafile: {}",
-                        datafile::serialize_row(&date, &append_bools)
-                    )
-                }
-            }
+            update_data(&mut data, &date)?;
         }
-        datafile::serialize_to_csv(&opt.file.unwrap(), &data)?;
+        datafile::serialize_to_csv(&opt.datafile.unwrap(), &data)?;
+    } else if append_date.is_some() {
+        graph_date = append_date.unwrap();
+        update_data(&mut data, &graph_date)?;
+        datafile::serialize_to_csv(&opt.datafile.unwrap(), &data)?;
+    } else {
+        graph_date = Local::today().naive_local();
     }
     graphing::graph_last_n_days(
         &data,
-        &spec_date,
+        &graph_date,
         opt.graph_days.unwrap(),
         opt.past_periods.unwrap(),
         opt.max_displayed_cols.unwrap(),
@@ -81,23 +73,24 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn get_append_date(input_date: &Option<String>) -> Result<NaiveDate> {
+fn get_append_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
     match input_date {
-        Some(date_string) => Ok(
+        Some(date_string) => Ok(Some(
             NaiveDate::parse_from_str(&date_string, datafile::DATE_FORMAT).context(format!(
-                "Could not parse input data string \"{}\"",
-                date_string
+                "Could not parse input date \"{}\". Use the format {}",
+                date_string,
+                datafile::DATE_FORMAT
             ))?,
-        ),
-        None => Ok(Local::today().naive_local()),
+        )),
+        None => Ok(None),
     }
 }
 
 fn merge_cli_and_persistent_options(persistent_config: &configuration::Config) -> CliOptions {
     let options_from_cli = CliOptions::from_args();
     CliOptions {
-        file: options_from_cli
-            .file
+        datafile: options_from_cli
+            .datafile
             .or_else(|| Some(persistent_config.datafile_path.clone())),
         graph_days: options_from_cli
             .graph_days
@@ -124,7 +117,7 @@ fn pretty_print_config() -> Result<()> {
 
 fn save_config(opt: &CliOptions) -> Result<()> {
     let updated_config = configuration::Config {
-        datafile_path: std::fs::canonicalize(opt.file.as_ref().unwrap())?,
+        datafile_path: std::fs::canonicalize(opt.datafile.as_ref().unwrap())?,
         graph_days: opt.graph_days.unwrap(),
         past_periods: opt.past_periods.unwrap(),
         max_displayed_cols: opt.max_displayed_cols.unwrap(),
@@ -132,6 +125,26 @@ fn save_config(opt: &CliOptions) -> Result<()> {
     configuration::save_config(&updated_config)?;
     println!("Successfully updated persistent configuration");
     Ok(())
+}
+
+fn update_data(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
+    let append_bools = input_data_interactively(&date, &data.header);
+    match datafile::update_data(data, &date, &append_bools)? {
+        datafile::SuccessfulUpdate::AddedNew => {
+            println!(
+                "Adding new row to datafile: {}",
+                datafile::serialize_row(&date, &append_bools)
+            );
+            Ok(())
+        }
+        datafile::SuccessfulUpdate::ReplacedExisting(_existing_row) => {
+            println!(
+                "Updated row in datafile: {}",
+                datafile::serialize_row(&date, &append_bools)
+            );
+            Ok(())
+        }
+    }
 }
 
 fn input_data_interactively(date: &NaiveDate, headers: &[String]) -> Vec<bool> {
@@ -148,4 +161,11 @@ fn input_data_interactively(date: &NaiveDate, headers: &[String]) -> Vec<bool> {
             !line.trim().is_empty()
         })
         .collect()
+}
+
+fn yesterday() -> NaiveDate {
+    Local::today()
+        .naive_local()
+        .checked_sub_signed(chrono::Duration::days(1))
+        .unwrap()
 }
