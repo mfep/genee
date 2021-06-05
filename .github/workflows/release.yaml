@@ -1,0 +1,41 @@
+on:
+  push:
+    tags:
+      - '*'
+
+name: Release
+
+jobs:
+  publish:
+    name: Release for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        name: [
+          linux,
+          windows
+        ]
+
+        include:
+          - name: linux
+            os: ubuntu-latest
+            artifact_name: target/release/<name>
+            asset_name: <name>_linux
+          - name: windows
+            os: windows-latest
+            artifact_name: target/release/<name>.exe
+            asset_name: <name>_windows
+    
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - name: Build
+        run: cargo build --release --locked
+      - name: Upload binaries to release
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.artifact_name }}
