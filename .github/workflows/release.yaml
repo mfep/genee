@@ -19,12 +19,12 @@ jobs:
         include:
           - name: linux
             os: ubuntu-latest
-            artifact_name: target/release/<name>
-            asset_name: <name>_linux
+            artifact_name: target/release/genee
+            asset_name: genee_linux
           - name: windows
             os: windows-latest
-            artifact_name: target/release/<name>.exe
-            asset_name: <name>_windows
+            artifact_name: target/release/genee.exe
+            asset_name: genee_windows
     
     steps:
       - uses: actions/checkout@v1
