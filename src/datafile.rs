@@ -180,6 +180,16 @@ pub fn get_missing_dates(
     Ok(result)
 }
 
+/// Creates a new CSV data file at the specified path from a header list.
+pub fn create_new_csv(path: &Path, headers: &[String]) -> Result<()> {
+    let data = DiaryData {
+        header: headers.to_vec(),
+        data: BTreeMap::default(),
+    };
+    serialize_to_csv(path, &data)?;
+    Ok(())
+}
+
 fn get_datafile_reader(path: &Path) -> Result<BufReader<File>> {
     let csv_file = File::open(path).context(format!("Cannot open data file at {:?}", path))?;
     let reader = BufReader::new(csv_file);

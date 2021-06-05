@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use chrono::Local;
 use chrono::NaiveDate;
 use genee::configuration;
@@ -6,7 +6,7 @@ use genee::datafile;
 use genee::datafile::DiaryData;
 use genee::graphing;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -34,6 +34,9 @@ struct CliOptions {
 
     #[structopt(long)]
     save_config: bool,
+
+    #[structopt(long)]
+    new: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -46,7 +49,11 @@ fn main() -> Result<()> {
         pretty_print_config()?;
         return Ok(());
     }
-    let mut data = datafile::parse_csv_to_diary_data(&opt.datafile.as_ref().unwrap())?;
+    let datafile_path = opt.datafile.unwrap();
+    if opt.new.is_some() {
+        create_new(&datafile_path, opt.new.as_ref().unwrap())?;
+    }
+    let mut data = datafile::parse_csv_to_diary_data(&datafile_path)?;
     let append_date = get_append_date(&opt.append_date)?;
     let graph_date: NaiveDate;
     if opt.fill {
@@ -55,11 +62,11 @@ fn main() -> Result<()> {
         for date in appended_dates {
             update_data(&mut data, &date)?;
         }
-        datafile::serialize_to_csv(&opt.datafile.unwrap(), &data)?;
+        datafile::serialize_to_csv(&datafile_path, &data)?;
     } else if append_date.is_some() {
         graph_date = append_date.unwrap();
         update_data(&mut data, &graph_date)?;
-        datafile::serialize_to_csv(&opt.datafile.unwrap(), &data)?;
+        datafile::serialize_to_csv(&datafile_path, &data)?;
     } else {
         graph_date = Local::today().naive_local();
     }
@@ -168,4 +175,16 @@ fn yesterday() -> NaiveDate {
         .naive_local()
         .checked_sub_signed(chrono::Duration::days(1))
         .unwrap()
+}
+
+fn create_new(path: &Path, headers_string: &str) -> Result<()> {
+    let mut headers_vector = vec![];
+    for title in headers_string.split(',') {
+        if title.is_empty() {
+            bail!(format!("Invalid header specification: {}", headers_string));
+        }
+        headers_vector.push(String::from(title));
+    }
+    datafile::create_new_csv(path, &headers_vector)?;
+    Ok(())
 }
