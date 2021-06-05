@@ -20,11 +20,11 @@ jobs:
           - name: linux
             os: ubuntu-latest
             artifact_name: target/release/genee
-            asset_name: genee_linux
+            asset_name: genee_lin_${{ github.ref }}
           - name: windows
             os: windows-latest
             artifact_name: target/release/genee.exe
-            asset_name: genee_windows
+            asset_name: genee_win_${{ github.ref }}.exe
     
     steps:
       - uses: actions/checkout@v1
