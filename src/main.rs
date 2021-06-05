@@ -11,30 +11,49 @@ use structopt::StructOpt;
 
 #[derive(StructOpt)]
 struct CliOptions {
+    /// Path to the diary file.
+    /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(short, long, parse(from_os_str))]
     datafile: Option<PathBuf>,
 
+    /// How many days each period should contain.
+    /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(short, long)]
     graph_days: Option<usize>,
 
+    /// If set, habit information for all the missing days is queried between 'append_date'
+    /// and yesterday. If 'append_date' is not set, all the missing days are queried between the
+    /// first entry in the diary and yesterday.
     #[structopt(short, long)]
     fill: bool,
 
+    /// When provided, the habit data is queried and written to the diary at the specified date.
+    /// The format of the date must be YYYY-MM-DD.
+    /// If --fill is also set, this option serves a different purpose.
     #[structopt(short, long)]
     append_date: Option<String>,
 
+    /// Specifies the number of displayed periods when graphing the diary data.
+    /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(short, long)]
     past_periods: Option<usize>,
 
+    /// Specifies the maximum allowed width of the terminal output.
+    /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(long)]
     max_displayed_cols: Option<usize>,
 
+    /// If set, the current persistent configuration is displayed to the terminal.
     #[structopt(long)]
     list_config: bool,
 
+    /// If set, the provided values for --datafile --graph-days --past-periods and --max-displayed-cols
+    /// options are written to the persistent configuration.
     #[structopt(long)]
     save_config: bool,
 
+    /// Provide a comma separated list of habit categories. A new diary file is created at the specified
+    /// --datafile path. Be aware that this overwrites any existing diary file.
     #[structopt(long)]
     new: Option<String>,
 }

@@ -40,14 +40,17 @@ pub fn load_config() -> Result<Config> {
     confy::load_path(get_config_path()).context("Could not load configuration file")
 }
 
+/// Saves the persistent configuration to its default location.
 pub fn save_config(config: &Config) -> Result<()> {
     Ok(confy::store_path(get_config_path(), config)?)
 }
 
+/// Serializes the provided configuration to pretty, human-readable format.
 pub fn pretty_print_config(config: &Config) -> Result<String> {
     Ok(toml::to_string_pretty(config)?)
 }
 
+/// Returns the path to the persistent configuration file.
 pub fn get_config_path() -> PathBuf {
     let mut config_dir = get_project_dirs().config_dir().to_path_buf();
     config_dir.set_file_name("genee-config");
