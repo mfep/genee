@@ -1,9 +1,10 @@
 [package]
 name = "genee"
 version = "0.1.0"
-authors = ["lorinc"]
+authors = ["Lőrinc Serfőző <lorinc.serfozo@mailbox.org>"]
 edition = "2018"
 default-run = "genee"
+description = "A habit tracker app with command-line interface"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
+#[structopt(about)]
 struct CliOptions {
     /// Path to the diary file.
     /// When not provided, its value is loaded from persistent configuration file.
@@ -21,8 +22,8 @@ struct CliOptions {
     #[structopt(short, long)]
     graph_days: Option<usize>,
 
-    /// If set, habit information for all the missing days is queried between 'append_date'
-    /// and yesterday. If 'append_date' is not set, all the missing days are queried between the
+    /// If set, habit information for all the missing days is queried between --append-date
+    /// and yesterday. If --append-date is not set, all the missing days are queried between the
     /// first entry in the diary and yesterday.
     #[structopt(short, long)]
     fill: bool,
