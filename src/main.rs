@@ -143,8 +143,13 @@ fn pretty_print_config() -> Result<()> {
 }
 
 fn save_config(opt: &CliOptions) -> Result<()> {
+    let provided_datafile_path = opt.datafile.clone().unwrap();
+    let full_datafile_path = std::fs::canonicalize(provided_datafile_path.clone());
+    if full_datafile_path.is_err() {
+        println!("Cannot canonicalize provided datafile path, saving the uncanonicalized path to configuration");
+    }
     let updated_config = configuration::Config {
-        datafile_path: std::fs::canonicalize(opt.datafile.as_ref().unwrap())?,
+        datafile_path: full_datafile_path.unwrap_or(provided_datafile_path),
         graph_days: opt.graph_days.unwrap(),
         past_periods: opt.past_periods.unwrap(),
         max_displayed_cols: opt.max_displayed_cols.unwrap(),
