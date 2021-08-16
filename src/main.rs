@@ -103,7 +103,7 @@ fn main() -> Result<()> {
 fn get_append_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
     match input_date {
         Some(date_string) => Ok(Some(
-            NaiveDate::parse_from_str(&date_string, datafile::DATE_FORMAT).context(format!(
+            NaiveDate::parse_from_str(date_string, datafile::DATE_FORMAT).context(format!(
                 "Could not parse input date \"{}\". Use the format {}",
                 date_string,
                 datafile::DATE_FORMAT
@@ -160,13 +160,13 @@ fn save_config(opt: &CliOptions) -> Result<()> {
 }
 
 fn update_data(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
-    let append_bools = input_data_interactively(&date, &data.header);
-    match datafile::update_data(data, &date, &append_bools)? {
+    let append_bools = input_data_interactively(date, &data.header);
+    match datafile::update_data(data, date, &append_bools)? {
         datafile::SuccessfulUpdate::AddedNew => {
             println!(
                 "Adding new row to datafile:\n{}\n{}",
                 graphing::pretty_print_header(&data.header),
-                graphing::pretty_print_row(&date, &append_bools)
+                graphing::pretty_print_row(date, &append_bools)
             );
             Ok(())
         }
@@ -174,7 +174,7 @@ fn update_data(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
             println!(
                 "Updated row in datafile:\n{}\n{}",
                 graphing::pretty_print_header(&data.header),
-                graphing::pretty_print_row(&date, &append_bools)
+                graphing::pretty_print_row(date, &append_bools)
             );
             Ok(())
         }
