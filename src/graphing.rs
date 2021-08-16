@@ -31,6 +31,30 @@ pub fn graph_last_n_days(
     Ok(())
 }
 
+pub fn pretty_print_header(headers: &[String]) -> String {
+    let mut ret = String::new();
+    ret += "          ";
+    for header in headers {
+        ret += " ";
+        ret += &match header.len() {
+            0 => panic!("Empty header is not allowed"),
+            1 => format!(" {} ", header),
+            2 => format!(" {}", header),
+            _ => header.split_at(3).0.to_string(),
+        };
+    }
+    ret
+}
+
+pub fn pretty_print_row(date: &NaiveDate, data: &[bool]) -> String {
+    let mut ret = String::new();
+    ret += &date.format(datafile::DATE_FORMAT).to_string();
+    for &val in data {
+        ret += if val { "  ✓ " } else { "    " };
+    }
+    ret
+}
+
 fn generate_rows(
     names: &[String],
     count_vectors: &[Vec<usize>],
