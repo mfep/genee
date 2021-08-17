@@ -31,7 +31,33 @@ pub fn graph_last_n_days(
     Ok(())
 }
 
-pub fn pretty_print_header(headers: &[String]) -> String {
+/// Prints a header and a single row in a nice tabular way.
+pub fn pretty_print_diary_row(data: &DiaryData, date: &NaiveDate) -> String {
+    pretty_print_diary_rows(data, date, date)
+}
+
+/// Prints the diary table with header between the begin and end date.
+/// Both limits inclusive.
+pub fn pretty_print_diary_rows(
+    data: &DiaryData,
+    begin_date: &NaiveDate,
+    end_date: &NaiveDate,
+) -> String {
+    let mut ret = String::new();
+    ret += &pretty_print_header(&data.header);
+    ret += "\n";
+    let mut current_date = *begin_date;
+    while &current_date <= end_date {
+        let current_row = data.data.get(&current_date);
+        if let Some(row) = current_row {
+            ret += &pretty_print_row(&current_date, row);
+        }
+        current_date += chrono::Duration::days(1);
+    }
+    ret
+}
+
+fn pretty_print_header(headers: &[String]) -> String {
     let mut ret = String::new();
     ret += "          ";
     for header in headers {
@@ -46,7 +72,7 @@ pub fn pretty_print_header(headers: &[String]) -> String {
     ret
 }
 
-pub fn pretty_print_row(date: &NaiveDate, data: &[bool]) -> String {
+fn pretty_print_row(date: &NaiveDate, data: &[bool]) -> String {
     let mut ret = String::new();
     ret += &date.format(datafile::DATE_FORMAT).to_string();
     for &val in data {

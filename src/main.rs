@@ -164,17 +164,15 @@ fn update_data(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
     match datafile::update_data(data, date, &append_bools)? {
         datafile::SuccessfulUpdate::AddedNew => {
             println!(
-                "Adding new row to datafile:\n{}\n{}",
-                graphing::pretty_print_header(&data.header),
-                graphing::pretty_print_row(date, &append_bools)
+                "Adding new row to datafile:\n{}",
+                graphing::pretty_print_diary_row(data, date)
             );
             Ok(())
         }
         datafile::SuccessfulUpdate::ReplacedExisting(_existing_row) => {
             println!(
-                "Updated row in datafile:\n{}\n{}",
-                graphing::pretty_print_header(&data.header),
-                graphing::pretty_print_row(date, &append_bools)
+                "Updated row in datafile:\n{}",
+                graphing::pretty_print_diary_row(data, date)
             );
             Ok(())
         }
