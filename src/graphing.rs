@@ -50,10 +50,11 @@ pub fn pretty_print_diary_rows(
         let current_row = data.data.get(&current_date);
         if let Some(row) = current_row {
             ret += &pretty_print_row(&current_date, row);
-        }
-        else
-        {
-            ret += &format!("{} !date missing from diary!\n", current_date.format(datafile::DATE_FORMAT));
+        } else {
+            ret += &format!(
+                "{} !date missing from diary!\n",
+                current_date.format(datafile::DATE_FORMAT)
+            );
         }
         current_date += chrono::Duration::days(1);
     }

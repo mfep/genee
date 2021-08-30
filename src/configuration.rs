@@ -4,10 +4,10 @@ use directories_next::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-pub const DEFAULT_GRAPH_DAYS : usize = 30;
-pub const DEFAULT_PAST_PERIODS : usize = 2;
-pub const DEFAULT_MAX_DISPLAYED_COLS : usize = 70;
-pub const DEFAULT_LIST_PREVIOUS_DAYS : usize = 0;
+pub const DEFAULT_GRAPH_DAYS: usize = 30;
+pub const DEFAULT_PAST_PERIODS: usize = 2;
+pub const DEFAULT_MAX_DISPLAYED_COLS: usize = 70;
+pub const DEFAULT_LIST_PREVIOUS_DAYS: usize = 0;
 const QUALIFIER_ID: &str = "org";
 const ORG_ID: &str = "mfep";
 const APP_ID: &str = "genee";

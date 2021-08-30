@@ -96,11 +96,13 @@ fn main() -> Result<()> {
     } else {
         graph_date = Local::today().naive_local();
     }
-    if opt.list_previous_days.unwrap() > 0
-    {
+    if opt.list_previous_days.unwrap() > 0 {
         let today = Local::today().naive_local();
         let start_day = today - chrono::Duration::days(opt.list_previous_days.unwrap() as i64);
-        print!("{}", graphing::pretty_print_diary_rows(&data, &start_day, &today));
+        print!(
+            "{}",
+            graphing::pretty_print_diary_rows(&data, &start_day, &today)
+        );
     }
     graphing::graph_last_n_days(
         &data,
@@ -125,7 +127,10 @@ fn get_append_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
     }
 }
 
-fn merge_cli_and_persistent_options(options_from_cli: CliOptions, persistent_config: &configuration::Config) -> CliOptions {
+fn merge_cli_and_persistent_options(
+    options_from_cli: CliOptions,
+    persistent_config: &configuration::Config,
+) -> CliOptions {
     CliOptions {
         datafile: options_from_cli
             .datafile
@@ -157,7 +162,10 @@ fn pretty_print_config() -> Result<()> {
 }
 
 fn save_config(opt: &CliOptions) -> Result<()> {
-    let provided_datafile_path = opt.datafile.clone().unwrap_or(configuration::get_default_datafile_path());
+    let provided_datafile_path = opt
+        .datafile
+        .clone()
+        .unwrap_or_else(configuration::get_default_datafile_path);
     let full_datafile_path = std::fs::canonicalize(provided_datafile_path.clone());
     if full_datafile_path.is_err() {
         println!("Cannot canonicalize provided datafile path, saving the uncanonicalized path to configuration");
@@ -165,9 +173,15 @@ fn save_config(opt: &CliOptions) -> Result<()> {
     let updated_config = configuration::Config {
         datafile_path: full_datafile_path.unwrap_or(provided_datafile_path),
         graph_days: opt.graph_days.unwrap_or(configuration::DEFAULT_GRAPH_DAYS),
-        past_periods: opt.past_periods.unwrap_or(configuration::DEFAULT_PAST_PERIODS),
-        max_displayed_cols: opt.max_displayed_cols.unwrap_or(configuration::DEFAULT_MAX_DISPLAYED_COLS),
-        list_previous_days: opt.list_previous_days.unwrap_or(configuration::DEFAULT_LIST_PREVIOUS_DAYS),
+        past_periods: opt
+            .past_periods
+            .unwrap_or(configuration::DEFAULT_PAST_PERIODS),
+        max_displayed_cols: opt
+            .max_displayed_cols
+            .unwrap_or(configuration::DEFAULT_MAX_DISPLAYED_COLS),
+        list_previous_days: opt
+            .list_previous_days
+            .unwrap_or(configuration::DEFAULT_LIST_PREVIOUS_DAYS),
     };
     configuration::save_config(&updated_config)?;
     println!("Successfully updated persistent configuration");
