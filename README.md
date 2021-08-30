@@ -40,8 +40,9 @@ FLAGS:
                          entry in the diary and yesterday
     -h, --help           Prints help information
         --list-config    If set, the current persistent configuration is displayed to the terminal
-        --save-config    If set, the provided values for --datafile --graph-days --past-periods and --max-displayed-cols
-                         options are written to the persistent configuration
+        --save-config    If set, the provided values for --datafile --graph-days --past-periods --max-displayed-cols and
+                         --list-previous-days options are written to the persistent configuration. Unspecified options
+                         are reset to their default value
     -V, --version        Prints version information
 
 OPTIONS:
@@ -54,6 +55,9 @@ OPTIONS:
     -g, --graph-days <graph-days>
             How many days each period should contain. When not provided, its value is loaded from persistent
             configuration file
+    -l, --list-previous-days <list-previous-days>
+            Specifies the number of days from the diary that should be printed in a tabular format
+
         --max-displayed-cols <max-displayed-cols>
             Specifies the maximum allowed width of the terminal output. When not provided, its value is loaded from
             persistent configuration file

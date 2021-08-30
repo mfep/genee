@@ -52,8 +52,9 @@ struct CliOptions {
     #[structopt(long)]
     list_config: bool,
 
-    /// If set, the provided values for --datafile --graph-days --past-periods and --max-displayed-cols
-    /// options are written to the persistent configuration.
+    /// If set, the provided values for --datafile --graph-days --past-periods --max-displayed-cols
+    /// and --list-previous-days options are written to the persistent configuration.
+    /// Unspecified options are reset to their default value.
     #[structopt(long)]
     save_config: bool,
 
