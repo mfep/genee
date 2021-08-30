@@ -39,6 +39,10 @@ struct CliOptions {
     #[structopt(short, long)]
     past_periods: Option<usize>,
 
+    /// Specifies the number of days from the diary that should be printed in a tabular format.
+    #[structopt(short, long)]
+    list_previous_days: Option<usize>,
+
     /// Specifies the maximum allowed width of the terminal output.
     /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(long)]
@@ -60,11 +64,12 @@ struct CliOptions {
 }
 
 fn main() -> Result<()> {
-    let persistent_config = configuration::load_config()?;
-    let opt = merge_cli_and_persistent_options(&persistent_config);
+    let opt = CliOptions::from_args();
     if opt.save_config {
         save_config(&opt)?;
     }
+    let persistent_config = configuration::load_config()?;
+    let opt = merge_cli_and_persistent_options(opt, &persistent_config);
     if opt.list_config {
         pretty_print_config()?;
         return Ok(());
@@ -90,6 +95,12 @@ fn main() -> Result<()> {
     } else {
         graph_date = Local::today().naive_local();
     }
+    if opt.list_previous_days.unwrap() > 0
+    {
+        let today = Local::today().naive_local();
+        let start_day = today - chrono::Duration::days(opt.list_previous_days.unwrap() as i64);
+        print!("{}", graphing::pretty_print_diary_rows(&data, &start_day, &today));
+    }
     graphing::graph_last_n_days(
         &data,
         &graph_date,
@@ -113,8 +124,7 @@ fn get_append_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
     }
 }
 
-fn merge_cli_and_persistent_options(persistent_config: &configuration::Config) -> CliOptions {
-    let options_from_cli = CliOptions::from_args();
+fn merge_cli_and_persistent_options(options_from_cli: CliOptions, persistent_config: &configuration::Config) -> CliOptions {
     CliOptions {
         datafile: options_from_cli
             .datafile
@@ -128,6 +138,9 @@ fn merge_cli_and_persistent_options(persistent_config: &configuration::Config) -
         max_displayed_cols: options_from_cli
             .max_displayed_cols
             .or(Some(persistent_config.max_displayed_cols)),
+        list_previous_days: options_from_cli
+            .list_previous_days
+            .or(Some(persistent_config.list_previous_days)),
         ..options_from_cli
     }
 }
@@ -143,16 +156,17 @@ fn pretty_print_config() -> Result<()> {
 }
 
 fn save_config(opt: &CliOptions) -> Result<()> {
-    let provided_datafile_path = opt.datafile.clone().unwrap();
+    let provided_datafile_path = opt.datafile.clone().unwrap_or(configuration::get_default_datafile_path());
     let full_datafile_path = std::fs::canonicalize(provided_datafile_path.clone());
     if full_datafile_path.is_err() {
         println!("Cannot canonicalize provided datafile path, saving the uncanonicalized path to configuration");
     }
     let updated_config = configuration::Config {
         datafile_path: full_datafile_path.unwrap_or(provided_datafile_path),
-        graph_days: opt.graph_days.unwrap(),
-        past_periods: opt.past_periods.unwrap(),
-        max_displayed_cols: opt.max_displayed_cols.unwrap(),
+        graph_days: opt.graph_days.unwrap_or(configuration::DEFAULT_GRAPH_DAYS),
+        past_periods: opt.past_periods.unwrap_or(configuration::DEFAULT_PAST_PERIODS),
+        max_displayed_cols: opt.max_displayed_cols.unwrap_or(configuration::DEFAULT_MAX_DISPLAYED_COLS),
+        list_previous_days: opt.list_previous_days.unwrap_or(configuration::DEFAULT_LIST_PREVIOUS_DAYS),
     };
     configuration::save_config(&updated_config)?;
     println!("Successfully updated persistent configuration");

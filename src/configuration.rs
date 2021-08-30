@@ -4,6 +4,10 @@ use directories_next::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+pub const DEFAULT_GRAPH_DAYS : usize = 30;
+pub const DEFAULT_PAST_PERIODS : usize = 2;
+pub const DEFAULT_MAX_DISPLAYED_COLS : usize = 70;
+pub const DEFAULT_LIST_PREVIOUS_DAYS : usize = 0;
 const QUALIFIER_ID: &str = "org";
 const ORG_ID: &str = "mfep";
 const APP_ID: &str = "genee";
@@ -22,15 +26,19 @@ pub struct Config {
 
     /// Maximum number of columns of the content displayed in the termial.
     pub max_displayed_cols: usize,
+
+    /// Specifies the number of days from the diary that should be printed in a tabular format.
+    pub list_previous_days: usize,
 }
 
 impl std::default::Default for Config {
     fn default() -> Self {
         Config {
             datafile_path: get_default_datafile_path(),
-            graph_days: 30,
-            past_periods: 2,
-            max_displayed_cols: 70,
+            graph_days: DEFAULT_GRAPH_DAYS,
+            past_periods: DEFAULT_PAST_PERIODS,
+            max_displayed_cols: DEFAULT_MAX_DISPLAYED_COLS,
+            list_previous_days: DEFAULT_LIST_PREVIOUS_DAYS,
         }
     }
 }
@@ -58,17 +66,18 @@ pub fn get_config_path() -> PathBuf {
     config_dir
 }
 
+/// Returns the default datafile path.
+pub fn get_default_datafile_path() -> PathBuf {
+    let mut data_dir = get_project_dirs().data_dir().to_path_buf();
+    data_dir.set_file_name("genee-data");
+    data_dir.set_extension("csv");
+    data_dir
+}
+
 fn get_project_dirs() -> ProjectDirs {
     let project_dirs = ProjectDirs::from(QUALIFIER_ID, ORG_ID, APP_ID);
     if project_dirs.is_none() {
         panic!("Cannot open project directory");
     }
     project_dirs.unwrap()
-}
-
-fn get_default_datafile_path() -> PathBuf {
-    let mut data_dir = get_project_dirs().data_dir().to_path_buf();
-    data_dir.set_file_name("genee-data");
-    data_dir.set_extension("csv");
-    data_dir
 }

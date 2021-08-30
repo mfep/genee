@@ -45,12 +45,15 @@ pub fn pretty_print_diary_rows(
 ) -> String {
     let mut ret = String::new();
     ret += &pretty_print_header(&data.header);
-    ret += "\n";
     let mut current_date = *begin_date;
     while &current_date <= end_date {
         let current_row = data.data.get(&current_date);
         if let Some(row) = current_row {
             ret += &pretty_print_row(&current_date, row);
+        }
+        else
+        {
+            ret += &format!("{} !date missing from diary!\n", current_date.format(datafile::DATE_FORMAT));
         }
         current_date += chrono::Duration::days(1);
     }
@@ -69,6 +72,7 @@ fn pretty_print_header(headers: &[String]) -> String {
             _ => header.split_at(3).0.to_string(),
         };
     }
+    ret += "\n";
     ret
 }
 
@@ -78,6 +82,7 @@ fn pretty_print_row(date: &NaiveDate, data: &[bool]) -> String {
     for &val in data {
         ret += if val { "  ✓ " } else { "    " };
     }
+    ret += "\n";
     ret
 }
 
