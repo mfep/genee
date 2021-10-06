@@ -81,9 +81,13 @@ fn main() -> Result<()> {
     }
     let mut data = datafile::parse_csv_to_diary_data(&datafile_path)?;
     let append_date = get_append_date(&opt.append_date)?;
-    let graph_date: NaiveDate;
+    let today = Local::today().naive_local();
+    let mut graph_date = if data.data.contains_key(&today) {
+        today
+    } else {
+        yesterday()
+    };
     if opt.fill {
-        graph_date = yesterday();
         let appended_dates = datafile::get_missing_dates(&data, &append_date, &graph_date)?;
         for date in appended_dates {
             update_data(&mut data, &date)?;
@@ -93,15 +97,13 @@ fn main() -> Result<()> {
         graph_date = append_date.unwrap();
         update_data(&mut data, &graph_date)?;
         datafile::serialize_to_csv(&datafile_path, &data)?;
-    } else {
-        graph_date = Local::today().naive_local();
     }
     if opt.list_previous_days.unwrap() > 0 {
-        let today = Local::today().naive_local();
-        let start_day = today - chrono::Duration::days(opt.list_previous_days.unwrap() as i64);
+        let start_day =
+            graph_date - chrono::Duration::days(opt.list_previous_days.unwrap() as i64 - 1i64);
         print!(
             "{}",
-            graphing::pretty_print_diary_rows(&data, &start_day, &today)
+            graphing::pretty_print_diary_rows(&data, &start_day, &graph_date)
         );
     }
     graphing::graph_last_n_days(
