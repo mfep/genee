@@ -65,6 +65,23 @@ struct CliOptions {
 }
 
 fn main() -> Result<()> {
+    let opt = handle_config()?;
+    let datafile_path = opt.datafile.as_ref().unwrap();
+    if opt.new.is_some() {
+        create_new(datafile_path, opt.new.as_ref().unwrap())?;
+    }
+    let mut data = datafile::parse_csv_to_diary_data(datafile_path)?;
+
+    let append_date = get_append_date(&opt.append_date)?;
+    let last_date = get_graph_date(&data)?;
+
+    data = modify_datafile(&opt, &append_date, &last_date, data)?;
+    plot_datafile(&opt, &last_date, &data)?;
+
+    Ok(())
+}
+
+fn handle_config() -> Result<CliOptions> {
     let opt = CliOptions::from_args();
     if opt.save_config {
         save_config(&opt)?;
@@ -72,48 +89,13 @@ fn main() -> Result<()> {
     let persistent_config = configuration::load_config()?;
     let opt = merge_cli_and_persistent_options(opt, &persistent_config);
     if opt.list_config {
-        pretty_print_config()?;
-        return Ok(());
-    }
-    let datafile_path = opt.datafile.unwrap();
-    if opt.new.is_some() {
-        create_new(&datafile_path, opt.new.as_ref().unwrap())?;
-    }
-    let mut data = datafile::parse_csv_to_diary_data(&datafile_path)?;
-    let append_date = get_append_date(&opt.append_date)?;
-    let today = Local::today().naive_local();
-    let mut graph_date = if data.data.contains_key(&today) {
-        today
-    } else {
-        yesterday()
-    };
-    if opt.fill {
-        let appended_dates = datafile::get_missing_dates(&data, &append_date, &graph_date)?;
-        for date in appended_dates {
-            update_data(&mut data, &date)?;
-        }
-        datafile::serialize_to_csv(&datafile_path, &data)?;
-    } else if append_date.is_some() {
-        graph_date = append_date.unwrap();
-        update_data(&mut data, &graph_date)?;
-        datafile::serialize_to_csv(&datafile_path, &data)?;
-    }
-    if opt.list_previous_days.unwrap() > 0 {
-        let start_day =
-            graph_date - chrono::Duration::days(opt.list_previous_days.unwrap() as i64 - 1i64);
-        print!(
-            "{}",
-            graphing::pretty_print_diary_rows(&data, &start_day, &graph_date)
+        println!(
+            "Listing persistent configuration loaded from \"{}\"\n{}",
+            configuration::get_config_path().to_string_lossy(),
+            &persistent_config
         );
     }
-    graphing::graph_last_n_days(
-        &data,
-        &graph_date,
-        opt.graph_days.unwrap(),
-        opt.past_periods.unwrap(),
-        opt.max_displayed_cols.unwrap(),
-    )?;
-    Ok(())
+    Ok(opt)
 }
 
 fn get_append_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
@@ -126,6 +108,18 @@ fn get_append_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
             ))?,
         )),
         None => Ok(None),
+    }
+}
+
+fn get_graph_date(data: &datafile::DiaryData) -> Result<NaiveDate> {
+    let today = Local::today().naive_local();
+    if data.data.contains_key(&today) {
+        Ok(today)
+    } else {
+        Local::today()
+            .naive_local()
+            .checked_sub_signed(chrono::Duration::days(1))
+            .ok_or_else(|| anyhow::Error::msg("Could not get yesterday"))
     }
 }
 
@@ -151,16 +145,6 @@ fn merge_cli_and_persistent_options(
             .or(Some(persistent_config.list_previous_days)),
         ..options_from_cli
     }
-}
-
-fn pretty_print_config() -> Result<()> {
-    let persistent_config = configuration::load_config()?;
-    println!(
-        "Listing persistent configuration loaded from \"{}\"\n{}",
-        configuration::get_config_path().to_string_lossy(),
-        configuration::pretty_print_config(&persistent_config)?
-    );
-    Ok(())
 }
 
 fn save_config(opt: &CliOptions) -> Result<()> {
@@ -190,8 +174,21 @@ fn save_config(opt: &CliOptions) -> Result<()> {
     Ok(())
 }
 
-fn update_data(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
-    let append_bools = input_data_interactively(date, &data.header);
+fn input_day_interactively(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
+    println!(
+        "Enter habit data for date {}",
+        date.format(datafile::DATE_FORMAT)
+    );
+    let append_bools: Vec<bool> = data
+        .header
+        .iter()
+        .map(|header| {
+            println!("{} ?", header);
+            let mut line = String::new();
+            let _count = io::stdin().read_line(&mut line);
+            !line.trim().is_empty()
+        })
+        .collect();
     match datafile::update_data(data, date, &append_bools)? {
         datafile::SuccessfulUpdate::AddedNew => {
             println!(
@@ -210,27 +207,41 @@ fn update_data(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
     }
 }
 
-fn input_data_interactively(date: &NaiveDate, headers: &[String]) -> Vec<bool> {
-    println!(
-        "Enter habit data for date {}",
-        date.format(datafile::DATE_FORMAT)
-    );
-    headers
-        .iter()
-        .map(|header| {
-            println!("{} ?", header);
-            let mut line = String::new();
-            let _count = io::stdin().read_line(&mut line);
-            !line.trim().is_empty()
-        })
-        .collect()
+fn modify_datafile(
+    opt: &CliOptions,
+    append_date: &Option<NaiveDate>,
+    last_date: &NaiveDate,
+    mut data: DiaryData,
+) -> Result<DiaryData> {
+    if opt.fill {
+        let appended_dates = datafile::get_missing_dates(&data, append_date, last_date)?;
+        for date in appended_dates {
+            input_day_interactively(&mut data, &date)?;
+        }
+    } else if let Some(date) = *append_date {
+        input_day_interactively(&mut data, &date)?;
+    }
+    datafile::serialize_to_csv(opt.datafile.as_ref().unwrap(), &data)?;
+    Ok(data)
 }
 
-fn yesterday() -> NaiveDate {
-    Local::today()
-        .naive_local()
-        .checked_sub_signed(chrono::Duration::days(1))
-        .unwrap()
+fn plot_datafile(opt: &CliOptions, last_date: &NaiveDate, data: &DiaryData) -> Result<()> {
+    if opt.list_previous_days.unwrap() > 0 {
+        let start_day =
+            *last_date - chrono::Duration::days(opt.list_previous_days.unwrap() as i64 - 1i64);
+        print!(
+            "{}",
+            graphing::pretty_print_diary_rows(data, &start_day, last_date)
+        );
+    }
+    graphing::graph_last_n_days(
+        data,
+        last_date,
+        opt.graph_days.unwrap(),
+        opt.past_periods.unwrap(),
+        opt.max_displayed_cols.unwrap(),
+    )?;
+    Ok(())
 }
 
 fn create_new(path: &Path, headers_string: &str) -> Result<()> {

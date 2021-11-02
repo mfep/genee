@@ -43,6 +43,17 @@ impl std::default::Default for Config {
     }
 }
 
+impl std::fmt::Display for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let pretty_string_result = toml::to_string_pretty(&self);
+        if let Ok(pretty_string) = pretty_string_result {
+            write!(f, "{}", pretty_string)
+        } else {
+            std::fmt::Result::Err(std::fmt::Error)
+        }
+    }
+}
+
 /// Loads the persistent configuration from its default location.
 pub fn load_config() -> Result<Config> {
     confy::load_path(get_config_path()).context("Could not load configuration file")
@@ -51,11 +62,6 @@ pub fn load_config() -> Result<Config> {
 /// Saves the persistent configuration to its default location.
 pub fn save_config(config: &Config) -> Result<()> {
     Ok(confy::store_path(get_config_path(), config)?)
-}
-
-/// Serializes the provided configuration to pretty, human-readable format.
-pub fn pretty_print_config(config: &Config) -> Result<String> {
-    Ok(toml::to_string_pretty(config)?)
 }
 
 /// Returns the path to the persistent configuration file.
