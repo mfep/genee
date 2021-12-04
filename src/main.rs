@@ -1,11 +1,11 @@
 use anyhow::{bail, Context, Result};
 use chrono::Local;
 use chrono::NaiveDate;
+use dialoguer::MultiSelect;
 use genee::configuration;
 use genee::datafile;
 use genee::datafile::DiaryData;
 use genee::graphing;
-use std::io;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
@@ -175,36 +175,22 @@ fn save_config(opt: &CliOptions) -> Result<()> {
 }
 
 fn input_day_interactively(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
-    println!(
+    let prompt = format!(
         "Enter habit data for date {}",
         date.format(datafile::DATE_FORMAT)
     );
-    let append_bools: Vec<bool> = data
-        .header
-        .iter()
-        .map(|header| {
-            println!("{} ?", header);
-            let mut line = String::new();
-            let _count = io::stdin().read_line(&mut line);
-            !line.trim().is_empty()
-        })
-        .collect();
-    match datafile::update_data(data, date, &append_bools)? {
-        datafile::SuccessfulUpdate::AddedNew => {
-            println!(
-                "Adding new row to datafile:\n{}",
-                graphing::pretty_print_diary_row(data, date)
-            );
-            Ok(())
-        }
-        datafile::SuccessfulUpdate::ReplacedExisting(_existing_row) => {
-            println!(
-                "Updated row in datafile:\n{}",
-                graphing::pretty_print_diary_row(data, date)
-            );
-            Ok(())
-        }
+    let selected_items = MultiSelect::new()
+        .with_prompt(prompt)
+        .items(&data.header)
+        .interact()?;
+
+    let mut append_bools = vec![false; data.header.len()];
+    for idx in selected_items {
+        append_bools[idx] = true;
     }
+
+    datafile::update_data(data, date, &append_bools)?;
+    Ok(())
 }
 
 fn modify_datafile(
