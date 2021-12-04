@@ -162,9 +162,9 @@ pub fn get_missing_dates(
     data: &DiaryData,
     from: &Option<NaiveDate>,
     until: &NaiveDate,
-) -> Option<Vec<NaiveDate>> {
-    if data.data.is_empty() {
-        return None;
+) -> Vec<NaiveDate> {
+    if from.is_none() && data.data.is_empty() {
+        return vec![];
     }
     let first_date = from.unwrap_or_else(|| *data.data.iter().next().unwrap().0);
     let mut result = vec![];
@@ -177,7 +177,7 @@ pub fn get_missing_dates(
             .checked_add_signed(chrono::Duration::days(1))
             .unwrap();
     }
-    Some(result)
+    result
 }
 
 /// Creates a new CSV data file at the specified path from a header list.

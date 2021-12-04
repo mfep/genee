@@ -202,18 +202,13 @@ fn modify_datafile(
 ) -> Result<DiaryData> {
     if opt.fill {
         let missing_dates = datafile::get_missing_dates(&data, append_date, last_date);
-        match missing_dates {
-            Some(missing_dates) => {
-                for date in missing_dates {
-                    input_day_interactively(&mut data, &date)?;
-                }
-            }
-            None => {
-                input_day_interactively(&mut data, last_date)?;
-            }
+        for date in missing_dates {
+            input_day_interactively(&mut data, &date)?;
         }
     } else if let Some(date) = *append_date {
         input_day_interactively(&mut data, &date)?;
+    } else {
+        return Ok(data);
     }
     datafile::serialize_to_csv(opt.datafile.as_ref().unwrap(), &data)?;
     Ok(data)
