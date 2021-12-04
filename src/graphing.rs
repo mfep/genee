@@ -102,7 +102,7 @@ fn generate_rows(
     let mut ret = String::new();
     let max_width = max_width - 8;
     let max_count = count_vectors.iter().flat_map(|vector| vector.iter()).max();
-    if max_count.is_none() || *max_count.unwrap() == 0 {
+    if max_count.is_none() {
         bail!("No input data");
     }
     let max_count = max_count.unwrap();
@@ -116,7 +116,11 @@ fn generate_rows(
             ret += &head;
 
             let current_count = count_vector[name_index];
-            let width = current_count * max_width / max_count;
+            let width = if *max_count > 0usize {
+                current_count * max_width / max_count
+            } else {
+                0
+            };
             let color = COLORS[vector_index % COLORS.len()];
             if width == 0 {
                 ret += &Paint::new("▏").fg(color).to_string();
