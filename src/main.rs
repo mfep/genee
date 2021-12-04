@@ -59,7 +59,7 @@ struct CliOptions {
     save_config: bool,
 
     /// Provide a comma separated list of habit categories. A new diary file is created at the specified
-    /// --datafile path. Be aware that this overwrites any existing diary file.
+    /// --datafile path.
     #[structopt(long)]
     new: Option<String>,
 }
@@ -69,6 +69,7 @@ fn main() -> Result<()> {
     let datafile_path = opt.datafile.as_ref().unwrap();
     if opt.new.is_some() {
         create_new(datafile_path, opt.new.as_ref().unwrap())?;
+        return Ok(());
     }
     let mut data = datafile::parse_csv_to_diary_data(datafile_path)?;
 
@@ -200,9 +201,16 @@ fn modify_datafile(
     mut data: DiaryData,
 ) -> Result<DiaryData> {
     if opt.fill {
-        let appended_dates = datafile::get_missing_dates(&data, append_date, last_date)?;
-        for date in appended_dates {
-            input_day_interactively(&mut data, &date)?;
+        let missing_dates = datafile::get_missing_dates(&data, append_date, last_date);
+        match missing_dates {
+            Some(missing_dates) => {
+                for date in missing_dates {
+                    input_day_interactively(&mut data, &date)?;
+                }
+            }
+            None => {
+                input_day_interactively(&mut data, last_date)?;
+            }
         }
     } else if let Some(date) = *append_date {
         input_day_interactively(&mut data, &date)?;
@@ -239,5 +247,6 @@ fn create_new(path: &Path, headers_string: &str) -> Result<()> {
         headers_vector.push(String::from(title));
     }
     datafile::create_new_csv(path, &headers_vector)?;
+    println!("New datafile successfully created at {}", path.display());
     Ok(())
 }

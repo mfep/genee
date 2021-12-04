@@ -162,9 +162,9 @@ pub fn get_missing_dates(
     data: &DiaryData,
     from: &Option<NaiveDate>,
     until: &NaiveDate,
-) -> Result<Vec<NaiveDate>> {
+) -> Option<Vec<NaiveDate>> {
     if data.data.is_empty() {
-        bail!("Data file is empty");
+        return None;
     }
     let first_date = from.unwrap_or_else(|| *data.data.iter().next().unwrap().0);
     let mut result = vec![];
@@ -177,7 +177,7 @@ pub fn get_missing_dates(
             .checked_add_signed(chrono::Duration::days(1))
             .unwrap();
     }
-    Ok(result)
+    Some(result)
 }
 
 /// Creates a new CSV data file at the specified path from a header list.
@@ -186,6 +186,9 @@ pub fn create_new_csv(path: &Path, headers: &[String]) -> Result<()> {
         header: headers.to_vec(),
         data: BTreeMap::default(),
     };
+    if path.exists() {
+        bail!(format!("A file already exists at \"{}\"", path.display()))
+    }
     serialize_to_csv(path, &data)?;
     Ok(())
 }
