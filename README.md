@@ -63,7 +63,7 @@ OPTIONS:
             persistent configuration file
         --new <new>
             Provide a comma separated list of habit categories. A new diary file is created at the specified --datafile
-            path. Be aware that this overwrites any existing diary file
+            path
     -p, --past-periods <past-periods>
             Specifies the number of displayed periods when graphing the diary data. When not provided, its value is
             loaded from persistent configuration file
