@@ -237,7 +237,7 @@ fn fill_datafile(
     mut data: DiaryData,
 ) -> Result<DiaryData> {
     let mut missing_dates = datafile::get_missing_dates(&data, from_date, to_date);
-    if missing_dates.is_empty() {
+    if data.data.is_empty() {
         missing_dates.push(
             Local::today()
                 .naive_local()
