@@ -11,16 +11,19 @@ genee is a simple habit tracker program for the command line
 
 ## Workflow
 
-1. Figure out the list of habits to track. In this example, we would like to restrict our gaming binges and increase the frequency of our piano exercise sessions.
+1. Figure out the list of habits to track. In this example, we would like to restrict
+our gaming binges and increase the frequency of our piano exercise sessions.
 `GAM` stands for gaming, whereas `PNO` stands for the instrumental practice.
 2. Download the [latest release](https://github.com/mfep/genee/releases/latest) from this repository.
-3. Using the downloaded executable, create a new data file to store the diary data. Specify the list of habit abbreviations to use in this file:
-```genee --new GAM,PNO```
-4. Each day, fill in whether you practiced the particular habits the previous day or not. This can be done by invoking
-```genee -f```. This is followed by a prompt for each habit.
-5. After the fill command, the program displays the habit data of the current period (e.g. the number of habit occurences in the last 30 days)
-compared to the last period (the number of habit occurences between 30 and 60 days before now). This can be used to check whether our change of habits
-(picking up new habits, dropping bad ones) are on track or not.
+3. Using the downloaded executable, create a new data file to store the diary data.
+Specify the list of habit abbreviations to use in this file: ```genee new GAM,PNO```
+4. Each day, fill in whether you practiced the particular habits the previous day or not.
+This can be done by invoking ```genee fill```. This is followed by a prompt for each habit.
+5. After the fill command, the program displays the habit data of the current period
+(e.g. the number of habit occurences in the last 30 days) compared to the last period
+(the number of habit occurences between 30 and 60 days before now).
+This can be used to check whether our change of habits (picking up new habits,
+dropping bad ones) are on track or not.
 
 ### Example output diagram
 ![](https://user-images.githubusercontent.com/12499658/121962015-72212600-cd68-11eb-82fb-30279566b220.png)
@@ -32,23 +35,13 @@ genee X.Y.Z
 A habit tracker app with command-line interface
 
 USAGE:
-    genee.exe [FLAGS] [OPTIONS]
+    genee [OPTIONS] <SUBCOMMAND>
 
 FLAGS:
-    -f, --fill           If set, habit information for all the missing days is queried between --append-date and
-                         yesterday. If --append-date is not set, all the missing days are queried between the first
-                         entry in the diary and yesterday
-    -h, --help           Prints help information
-        --list-config    If set, the current persistent configuration is displayed to the terminal
-        --save-config    If set, the provided values for --datafile --graph-days --past-periods --max-displayed-cols and
-                         --list-previous-days options are written to the persistent configuration. Unspecified options
-                         are reset to their default value
-    -V, --version        Prints version information
+    -h, --help       Prints help information
+    -V, --version    Prints version information
 
 OPTIONS:
-    -a, --append-date <append-date>
-            When provided, the habit data is queried and written to the diary at the specified date. The format of the
-            date must be YYYY-MM-DD. If --fill is also set, this option serves a different purpose
     -d, --datafile <datafile>
             Path to the diary file. When not provided, its value is loaded from persistent configuration file
 
@@ -61,12 +54,21 @@ OPTIONS:
         --max-displayed-cols <max-displayed-cols>
             Specifies the maximum allowed width of the terminal output. When not provided, its value is loaded from
             persistent configuration file
-        --new <new>
-            Provide a comma separated list of habit categories. A new diary file is created at the specified --datafile
-            path
     -p, --past-periods <past-periods>
             Specifies the number of displayed periods when graphing the diary data. When not provided, its value is
             loaded from persistent configuration file
+
+SUBCOMMANDS:
+    fill           If set, habit information for all the missing days is queried between --from-date and yesterday.
+                   If --from-date is not set, all the missing days are queried between the first entry in the diary
+                   and yesterday
+    graph          Displays the habit data according to the specified options to the terminal
+    help           Prints this message or the help of the given subcommand(s)
+    insert         Queries for habit information on the specified date
+    list-config    Prints the persistent configuration
+    new            Provide a comma separated list of habit categories. A new diary file is created at the specified
+                   --datafile path
+    save-config    Saves the specified options to persistent configuration
 ```
 
 ## Building

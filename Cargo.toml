@@ -1,6 +1,6 @@
 [package]
 name = "genee"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Lőrinc Serfőző <lorinc.serfozo@mailbox.org>"]
 edition = "2018"
 default-run = "genee"

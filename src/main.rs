@@ -1,4 +1,5 @@
 use anyhow::{bail, Context, Result};
+use chrono::Duration;
 use chrono::Local;
 use chrono::NaiveDate;
 use dialoguer::MultiSelect;
@@ -22,18 +23,6 @@ struct CliOptions {
     #[structopt(short, long)]
     graph_days: Option<usize>,
 
-    /// If set, habit information for all the missing days is queried between --append-date
-    /// and yesterday. If --append-date is not set, all the missing days are queried between the
-    /// first entry in the diary and yesterday.
-    #[structopt(short, long)]
-    fill: bool,
-
-    /// When provided, the habit data is queried and written to the diary at the specified date.
-    /// The format of the date must be YYYY-MM-DD.
-    /// If --fill is also set, this option serves a different purpose.
-    #[structopt(short, long)]
-    append_date: Option<String>,
-
     /// Specifies the number of displayed periods when graphing the diary data.
     /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(short, long)]
@@ -48,58 +37,105 @@ struct CliOptions {
     #[structopt(long)]
     max_displayed_cols: Option<usize>,
 
-    /// If set, the current persistent configuration is displayed to the terminal.
-    #[structopt(long)]
-    list_config: bool,
+    #[structopt(subcommand)]
+    command: Command,
+}
 
-    /// If set, the provided values for --datafile --graph-days --past-periods --max-displayed-cols
-    /// and --list-previous-days options are written to the persistent configuration.
-    /// Unspecified options are reset to their default value.
-    #[structopt(long)]
-    save_config: bool,
+#[derive(StructOpt)]
+enum Command {
+    /// If set, habit information for all the missing days is queried between --from-date
+    /// and yesterday. If --from-date is not set, all the missing days are queried between the
+    /// first entry in the diary and yesterday.
+    /// If there is no entry in the diary, only yesterday is queried.
+    Fill {
+        /// Start the querying from this date. Must be in format YYYY-MM-DD.
+        #[structopt(long)]
+        from_date: Option<String>,
+
+        /// Controls whether to graph the diary after the fill.
+        #[structopt(long)]
+        no_graph: bool,
+    },
+
+    /// Displays the habit data according to the specified options to the terminal.
+    Graph,
+
+    /// Queries for habit information on the specified date.
+    Insert {
+        /// Date to set habit data on.  Must be in format YYYY-MM-DD.
+        date: String,
+
+        /// Controls whether to graph the diary after the fill.
+        #[structopt(long)]
+        no_graph: bool,
+    },
+
+    /// Prints the persistent configuration.
+    ListConfig,
 
     /// Provide a comma separated list of habit categories. A new diary file is created at the specified
     /// --datafile path.
-    #[structopt(long)]
-    new: Option<String>,
+    New { category_list: String },
+
+    /// Saves the specified options to persistent configuration.
+    SaveConfig,
 }
 
 fn main() -> Result<()> {
     let opt = handle_config()?;
     let datafile_path = opt.datafile.as_ref().unwrap();
-    if opt.new.is_some() {
-        create_new(datafile_path, opt.new.as_ref().unwrap())?;
-        return Ok(());
+    match opt.command {
+        Command::Fill {
+            ref from_date,
+            no_graph,
+        } => {
+            let from_date = parse_from_date(from_date)?;
+            let data = datafile::parse_csv_to_diary_data(datafile_path)?;
+            let to_date = get_graph_date(&data)?;
+            let data = fill_datafile(datafile_path, &from_date, &to_date, data)?;
+            if !no_graph {
+                plot_datafile(&opt, &to_date, &data)?;
+            }
+        }
+        Command::Graph => {
+            let data = datafile::parse_csv_to_diary_data(datafile_path)?;
+            plot_datafile(&opt, &Local::today().naive_local(), &data)?;
+        }
+        Command::Insert { ref date, no_graph } => {
+            let date = parse_from_date(&Some(date.clone()))?.unwrap();
+            let data = datafile::parse_csv_to_diary_data(datafile_path)?;
+            let data = insert_to_datafile(datafile_path, &date, data)?;
+            if !no_graph {
+                plot_datafile(&opt, &date, &data)?;
+            }
+        }
+        Command::ListConfig => {
+            let persistent_config = configuration::load_config()?;
+            println!(
+                "Listing persistent configuration loaded from '{}'\n{}",
+                configuration::get_config_path().to_string_lossy(),
+                &persistent_config
+            );
+        }
+        Command::New { ref category_list } => {
+            create_new(datafile_path, category_list)?;
+        }
+        Command::SaveConfig => {
+            save_config(&opt)?;
+        }
     }
-    let mut data = datafile::parse_csv_to_diary_data(datafile_path)?;
-
-    let append_date = get_append_date(&opt.append_date)?;
-    let last_date = get_graph_date(&data)?;
-
-    data = modify_datafile(&opt, &append_date, &last_date, data)?;
-    plot_datafile(&opt, &last_date, &data)?;
 
     Ok(())
 }
 
 fn handle_config() -> Result<CliOptions> {
     let opt = CliOptions::from_args();
-    if opt.save_config {
-        save_config(&opt)?;
-    }
     let persistent_config = configuration::load_config()?;
     let opt = merge_cli_and_persistent_options(opt, &persistent_config);
-    if opt.list_config {
-        println!(
-            "Listing persistent configuration loaded from \"{}\"\n{}",
-            configuration::get_config_path().to_string_lossy(),
-            &persistent_config
-        );
-    }
     Ok(opt)
 }
 
-fn get_append_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
+fn parse_from_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
     match input_date {
         Some(date_string) => Ok(Some(
             NaiveDate::parse_from_str(date_string, datafile::DATE_FORMAT).context(format!(
@@ -194,23 +230,35 @@ fn input_day_interactively(data: &mut DiaryData, date: &NaiveDate) -> Result<()>
     Ok(())
 }
 
-fn modify_datafile(
-    opt: &CliOptions,
-    append_date: &Option<NaiveDate>,
-    last_date: &NaiveDate,
+fn fill_datafile(
+    datafile_path: &Path,
+    from_date: &Option<NaiveDate>,
+    to_date: &NaiveDate,
     mut data: DiaryData,
 ) -> Result<DiaryData> {
-    if opt.fill {
-        let missing_dates = datafile::get_missing_dates(&data, append_date, last_date);
-        for date in missing_dates {
-            input_day_interactively(&mut data, &date)?;
-        }
-    } else if let Some(date) = *append_date {
-        input_day_interactively(&mut data, &date)?;
-    } else {
-        return Ok(data);
+    let mut missing_dates = datafile::get_missing_dates(&data, from_date, to_date);
+    if missing_dates.is_empty() {
+        missing_dates.push(
+            Local::today()
+                .naive_local()
+                .checked_sub_signed(Duration::days(1))
+                .unwrap(),
+        );
     }
-    datafile::serialize_to_csv(opt.datafile.as_ref().unwrap(), &data)?;
+    for date in missing_dates {
+        input_day_interactively(&mut data, &date)?;
+    }
+    datafile::serialize_to_csv(datafile_path, &data)?;
+    Ok(data)
+}
+
+fn insert_to_datafile(
+    datafile_path: &Path,
+    date: &NaiveDate,
+    mut data: DiaryData,
+) -> Result<DiaryData> {
+    input_day_interactively(&mut data, date)?;
+    datafile::serialize_to_csv(datafile_path, &data)?;
     Ok(data)
 }
 
