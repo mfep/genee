@@ -3,6 +3,7 @@ use crate::datafile;
 use crate::datafile::DiaryData;
 use anyhow::{bail, Result};
 use chrono::NaiveDate;
+use std::fmt::Write;
 use yansi::{Color, Paint};
 
 const COLORS: &[Color] = &[
@@ -51,8 +52,9 @@ pub fn pretty_print_diary_rows(
         if let Some(row) = current_row {
             ret += &pretty_print_row(&current_date, row);
         } else {
-            ret += &format!(
-                "{} !date missing from diary!\n",
+            _ = writeln!(
+                ret,
+                "{} !date missing from diary!",
                 current_date.format(datafile::DATE_FORMAT)
             );
         }
@@ -130,7 +132,7 @@ fn generate_rows(
                 }
                 ret += " ";
             }
-            ret += &format!("{}\n", Paint::new(current_count).bold());
+            _ = writeln!(ret, "{}", Paint::new(current_count).bold());
         }
     }
     Ok(ret)

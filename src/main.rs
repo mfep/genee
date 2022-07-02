@@ -58,7 +58,11 @@ enum Command {
     },
 
     /// Displays the habit data according to the specified options to the terminal.
-    Graph,
+    Graph {
+        /// Start the graphing from this date. Must be in format YYYY-MM-DD.
+        #[structopt(long)]
+        from_date: Option<String>,
+    },
 
     /// Queries for habit information on the specified date.
     Insert {
@@ -97,9 +101,11 @@ fn main() -> Result<()> {
                 plot_datafile(&opt, &to_date, &data)?;
             }
         }
-        Command::Graph => {
+        Command::Graph { ref from_date } => {
             let data = datafile::parse_csv_to_diary_data(datafile_path)?;
-            plot_datafile(&opt, &Local::today().naive_local(), &data)?;
+            let from_date = parse_from_date(from_date)?;
+            let from_date = from_date.unwrap_or_else(|| Local::today().naive_local());
+            plot_datafile(&opt, &from_date, &data)?;
         }
         Command::Insert { ref date, no_graph } => {
             let date = parse_from_date(&Some(date.clone()))?.unwrap();
