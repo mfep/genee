@@ -30,6 +30,12 @@ pub trait DiaryDataConnection {
 
     /// Returns a vector of missing dates between the first date in the database until specified date.
     fn get_missing_dates(&self, from: &Option<NaiveDate>, until: &NaiveDate) -> Vec<NaiveDate>;
+
+    fn get_header(&self) -> &[String];
+
+    fn get_row(&self, date: &NaiveDate) -> Option<&Vec<bool>>;
+
+    fn is_empty(&self) -> bool;
 }
 
 /// A complete in-memory representation of the data file.
@@ -43,7 +49,7 @@ pub struct DiaryData {
 }
 
 /// Tries to read data file to memory.
-pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
+pub fn open_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
     let mut reader = get_datafile_reader(path)?;
     let mut data = DiaryData {
         header: read_header(&mut reader)?,
@@ -77,7 +83,7 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
         }
         data.data.insert(current_date, row_data);
     }
-    Ok(data)
+    Ok(Box::new(data))
 }
 
 /// Calculates the occurences of all habits in the prescribed date interval.
@@ -166,6 +172,18 @@ impl DiaryDataConnection for DiaryData {
                 .unwrap();
         }
         result
+    }
+
+    fn get_header(&self) -> &[String] {
+        &self.header
+    }
+
+    fn get_row(&self, date: &NaiveDate) -> Option<&Vec<bool>> {
+        self.data.get(date)
+    }
+
+    fn is_empty(&self) -> bool {
+        self.data.is_empty()
     }
 }
 

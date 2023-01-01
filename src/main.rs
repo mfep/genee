@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 use dialoguer::MultiSelect;
 use genee::configuration;
 use genee::datafile;
-use genee::datafile::{DiaryData, DiaryDataConnection};
+use genee::datafile::DiaryDataConnection;
 use genee::graphing;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
@@ -94,25 +94,25 @@ fn main() -> Result<()> {
             no_graph,
         } => {
             let from_date = parse_from_date(from_date)?;
-            let data = datafile::parse_csv_to_diary_data(datafile_path)?;
-            let to_date = get_graph_date(&data)?;
-            let data = fill_datafile(datafile_path, &from_date, &to_date, data)?;
+            let mut data = datafile::open_datafile(datafile_path)?;
+            let to_date = get_graph_date(&*data)?;
+            fill_datafile(datafile_path, &from_date, &to_date, &mut *data)?;
             if !no_graph {
-                plot_datafile(&opt, &to_date, &data)?;
+                plot_datafile(&opt, &to_date, &*data)?;
             }
         }
         Command::Graph { ref from_date } => {
-            let data = datafile::parse_csv_to_diary_data(datafile_path)?;
+            let data = datafile::open_datafile(datafile_path)?;
             let from_date = parse_from_date(from_date)?;
             let from_date = from_date.unwrap_or_else(|| Local::today().naive_local());
-            plot_datafile(&opt, &from_date, &data)?;
+            plot_datafile(&opt, &from_date, &*data)?;
         }
         Command::Insert { ref date, no_graph } => {
             let date = parse_from_date(&Some(date.clone()))?.unwrap();
-            let data = datafile::parse_csv_to_diary_data(datafile_path)?;
-            let data = insert_to_datafile(datafile_path, &date, data)?;
+            let mut data = datafile::open_datafile(datafile_path)?;
+            insert_to_datafile(datafile_path, &date, &mut *data)?;
             if !no_graph {
-                plot_datafile(&opt, &date, &data)?;
+                plot_datafile(&opt, &date, &*data)?;
             }
         }
         Command::ListConfig => {
@@ -154,9 +154,9 @@ fn parse_from_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
     }
 }
 
-fn get_graph_date(data: &datafile::DiaryData) -> Result<NaiveDate> {
+fn get_graph_date(data: &dyn DiaryDataConnection) -> Result<NaiveDate> {
     let today = Local::today().naive_local();
-    if data.data.contains_key(&today) {
+    if data.get_row(&today).is_some() {
         Ok(today)
     } else {
         Local::today()
@@ -217,17 +217,18 @@ fn save_config(opt: &CliOptions) -> Result<()> {
     Ok(())
 }
 
-fn input_day_interactively(data: &mut DiaryData, date: &NaiveDate) -> Result<()> {
+fn input_day_interactively(data: &mut dyn DiaryDataConnection, date: &NaiveDate) -> Result<()> {
     let prompt = format!(
         "Enter habit data for date {}",
         date.format(datafile::DATE_FORMAT)
     );
+    let header = data.get_header();
     let selected_items = MultiSelect::new()
         .with_prompt(prompt)
-        .items(&data.header)
+        .items(header)
         .interact()?;
 
-    let mut append_bools = vec![false; data.header.len()];
+    let mut append_bools = vec![false; header.len()];
     for idx in selected_items {
         append_bools[idx] = true;
     }
@@ -240,10 +241,10 @@ fn fill_datafile(
     datafile_path: &Path,
     from_date: &Option<NaiveDate>,
     to_date: &NaiveDate,
-    mut data: DiaryData,
-) -> Result<DiaryData> {
+    data: &mut dyn DiaryDataConnection,
+) -> Result<()> {
     let mut missing_dates = data.get_missing_dates(from_date, to_date);
-    if data.data.is_empty() {
+    if data.is_empty() {
         missing_dates.push(
             Local::today()
                 .naive_local()
@@ -252,23 +253,27 @@ fn fill_datafile(
         );
     }
     for date in missing_dates {
-        input_day_interactively(&mut data, &date)?;
+        input_day_interactively(data, &date)?;
     }
     data.serialize(datafile_path)?;
-    Ok(data)
+    Ok(())
 }
 
 fn insert_to_datafile(
     datafile_path: &Path,
     date: &NaiveDate,
-    mut data: DiaryData,
-) -> Result<DiaryData> {
-    input_day_interactively(&mut data, date)?;
+    data: &mut dyn DiaryDataConnection,
+) -> Result<()> {
+    input_day_interactively(data, date)?;
     data.serialize(datafile_path)?;
-    Ok(data)
+    Ok(())
 }
 
-fn plot_datafile(opt: &CliOptions, last_date: &NaiveDate, data: &DiaryData) -> Result<()> {
+fn plot_datafile(
+    opt: &CliOptions,
+    last_date: &NaiveDate,
+    data: &dyn DiaryDataConnection,
+) -> Result<()> {
     if opt.list_previous_days.unwrap() > 0 {
         let start_day =
             *last_date - chrono::Duration::days(opt.list_previous_days.unwrap() as i64 - 1i64);
