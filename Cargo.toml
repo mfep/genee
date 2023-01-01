@@ -2,7 +2,7 @@
 name = "genee"
 version = "0.6.0"
 authors = ["Lőrinc Serfőző <lorinc.serfozo@mailbox.org>"]
-edition = "2018"
+edition = "2021"
 default-run = "genee"
 description = "A habit tracker app with command-line interface"
 license = "MIT"
