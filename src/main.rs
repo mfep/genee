@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 use dialoguer::MultiSelect;
 use genee::configuration;
 use genee::datafile;
-use genee::datafile::DiaryData;
+use genee::datafile::{DiaryData, DiaryDataConnection};
 use genee::graphing;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
@@ -232,7 +232,7 @@ fn input_day_interactively(data: &mut DiaryData, date: &NaiveDate) -> Result<()>
         append_bools[idx] = true;
     }
 
-    datafile::update_data(data, date, &append_bools)?;
+    data.update_data(date, &append_bools)?;
     Ok(())
 }
 
@@ -242,7 +242,7 @@ fn fill_datafile(
     to_date: &NaiveDate,
     mut data: DiaryData,
 ) -> Result<DiaryData> {
-    let mut missing_dates = datafile::get_missing_dates(&data, from_date, to_date);
+    let mut missing_dates = data.get_missing_dates(from_date, to_date);
     if data.data.is_empty() {
         missing_dates.push(
             Local::today()
@@ -254,7 +254,7 @@ fn fill_datafile(
     for date in missing_dates {
         input_day_interactively(&mut data, &date)?;
     }
-    datafile::serialize_to_csv(datafile_path, &data)?;
+    data.serialize(datafile_path)?;
     Ok(data)
 }
 
@@ -264,7 +264,7 @@ fn insert_to_datafile(
     mut data: DiaryData,
 ) -> Result<DiaryData> {
     input_day_interactively(&mut data, date)?;
-    datafile::serialize_to_csv(datafile_path, &data)?;
+    data.serialize(datafile_path)?;
     Ok(data)
 }
 

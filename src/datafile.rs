@@ -14,6 +14,24 @@ pub const DELIMETER: char = ',';
 /// For example: 2020-01-25
 pub const DATE_FORMAT: &str = "%Y-%m-%d";
 
+pub trait DiaryDataConnection {
+    /// Calculates the occurences of all habits over multiple periods of date ranges.
+    fn calculate_data_counts_per_iter(
+        &self,
+        date_ranges: &[(NaiveDate, NaiveDate)],
+    ) -> Vec<Vec<usize>>;
+
+    /// Modifies the provided `DiaryData` instance with the provided data row and date.
+    fn update_data(&mut self, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate>;
+
+    /// Tries to write a `DiaryData` instance to the disk at the specified path.
+    /// This replaces any existing file (given the process has permission).
+    fn serialize(&self, path: &Path) -> Result<()>;
+
+    /// Returns a vector of missing dates between the first date in the database until specified date.
+    fn get_missing_dates(&self, from: &Option<NaiveDate>, until: &NaiveDate) -> Vec<NaiveDate>;
+}
+
 /// A complete in-memory representation of the data file.
 #[derive(Debug, Default)]
 pub struct DiaryData {
@@ -64,7 +82,7 @@ pub fn parse_csv_to_diary_data(path: &Path) -> Result<DiaryData> {
 
 /// Calculates the occurences of all habits in the prescribed date interval.
 /// Both limits are inclusive.
-pub fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate) -> Vec<usize> {
+fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate) -> Vec<usize> {
     let mut result: Vec<usize> = data.header.iter().map(|_| 0).collect();
     for (date, data) in data.data.iter().rev() {
         if date < from || date > to {
@@ -101,15 +119,54 @@ pub fn get_date_ranges(
         .collect()
 }
 
-/// Calculates the occurences of all habits over multiple periods of date ranges.
-pub fn calculate_data_counts_per_iter(
-    data: &DiaryData,
-    date_ranges: &[(NaiveDate, NaiveDate)],
-) -> Vec<Vec<usize>> {
-    date_ranges
-        .iter()
-        .map(|(start_date, end_date)| calculate_data_counts(data, end_date, start_date))
-        .collect()
+impl DiaryDataConnection for DiaryData {
+    fn calculate_data_counts_per_iter(
+        &self,
+        date_ranges: &[(NaiveDate, NaiveDate)],
+    ) -> Vec<Vec<usize>> {
+        date_ranges
+            .iter()
+            .map(|(start_date, end_date)| calculate_data_counts(self, end_date, start_date))
+            .collect()
+    }
+
+    fn update_data(&mut self, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate> {
+        if self.header.len() != new_row.len() {
+            bail!("The provided update row does not match the datafile header in size");
+        }
+        match self.data.insert(*date, new_row.to_vec()) {
+            Some(replaced_row) => Ok(SuccessfulUpdate::ReplacedExisting(replaced_row)),
+            None => Ok(SuccessfulUpdate::AddedNew),
+        }
+    }
+
+    fn serialize(&self, path: &Path) -> Result<()> {
+        let mut file = File::create(path).context("Could not open file for writing")?;
+        let header = self.header.join(&String::from(DELIMETER));
+        writeln!(file, "date,{}", header)?;
+        for (date, data) in &self.data {
+            writeln!(file, "{}", serialize_row(date, data))?;
+        }
+        Ok(())
+    }
+
+    fn get_missing_dates(&self, from: &Option<NaiveDate>, until: &NaiveDate) -> Vec<NaiveDate> {
+        if from.is_none() && self.data.is_empty() {
+            return vec![];
+        }
+        let first_date = from.unwrap_or_else(|| *self.data.iter().next().unwrap().0);
+        let mut result = vec![];
+        let mut date_to_check = first_date;
+        while date_to_check <= *until {
+            if !self.data.contains_key(&date_to_check) {
+                result.push(date_to_check);
+            }
+            date_to_check = date_to_check
+                .checked_add_signed(chrono::Duration::days(1))
+                .unwrap();
+        }
+        result
+    }
 }
 
 /// Result of an update to a `DiaryData` instance.
@@ -122,62 +179,12 @@ pub enum SuccessfulUpdate {
     ReplacedExisting(Vec<bool>),
 }
 
-/// Modifies the provided `DiaryData` instance with the provided data row and date.
-pub fn update_data(
-    data: &mut DiaryData,
-    date: &NaiveDate,
-    new_row: &[bool],
-) -> Result<SuccessfulUpdate> {
-    if data.header.len() != new_row.len() {
-        bail!("The provided update row does not match the datafile header in size");
-    }
-    match data.data.insert(*date, new_row.to_vec()) {
-        Some(replaced_row) => Ok(SuccessfulUpdate::ReplacedExisting(replaced_row)),
-        None => Ok(SuccessfulUpdate::AddedNew),
-    }
-}
-
-/// Tries to write a `DiaryData` instance to the disk at the specified path.
-/// This replaces any existing file (given the process has permission).
-pub fn serialize_to_csv(path: &Path, data: &DiaryData) -> Result<()> {
-    let mut file = File::create(path).context("Could not open file for writing")?;
-    let header = data.header.join(&String::from(DELIMETER));
-    writeln!(file, "date,{}", header)?;
-    for (date, data) in &data.data {
-        writeln!(file, "{}", serialize_row(date, data))?;
-    }
-    Ok(())
-}
-
 /// Formats a data row with a date to `String`.
-pub fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
+fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
     let formatted_date = date.format(DATE_FORMAT);
     let content: Vec<&str> = data.iter().map(|&x| if x { "x" } else { "" }).collect();
     let joined_content = content.join(&String::from(DELIMETER));
     format!("{}{}{}", formatted_date, DELIMETER, joined_content)
-}
-
-/// Returns a vector of missing dates between the first date in the database until specified date.
-pub fn get_missing_dates(
-    data: &DiaryData,
-    from: &Option<NaiveDate>,
-    until: &NaiveDate,
-) -> Vec<NaiveDate> {
-    if from.is_none() && data.data.is_empty() {
-        return vec![];
-    }
-    let first_date = from.unwrap_or_else(|| *data.data.iter().next().unwrap().0);
-    let mut result = vec![];
-    let mut date_to_check = first_date;
-    while date_to_check <= *until {
-        if !data.data.contains_key(&date_to_check) {
-            result.push(date_to_check);
-        }
-        date_to_check = date_to_check
-            .checked_add_signed(chrono::Duration::days(1))
-            .unwrap();
-    }
-    result
 }
 
 /// Creates a new CSV data file at the specified path from a header list.
@@ -189,7 +196,7 @@ pub fn create_new_csv(path: &Path, headers: &[String]) -> Result<()> {
     if path.exists() {
         bail!(format!("A file already exists at \"{}\"", path.display()))
     }
-    serialize_to_csv(path, &data)?;
+    data.serialize(path)?;
     Ok(())
 }
 
@@ -233,7 +240,7 @@ fn test_calculate_data_counts_per_iter() {
     data.data
         .insert(NaiveDate::from_ymd(2021, 1, 5), vec![true, false, false]);
     let ranges = get_date_ranges(&NaiveDate::from_ymd(2021, 1, 5), 2, 3);
-    let result = calculate_data_counts_per_iter(&data, &ranges);
+    let result = data.calculate_data_counts_per_iter(&ranges);
     assert_eq!(vec![vec![2, 1, 1], vec![2, 1, 0], vec![1, 0, 0],], result);
 }
 

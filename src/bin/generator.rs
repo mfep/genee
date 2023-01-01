@@ -1,7 +1,6 @@
 use anyhow::Result;
 use chrono::{Duration, Local};
-use genee::datafile;
-use genee::datafile::DiaryData;
+use genee::datafile::{DiaryData, DiaryDataConnection};
 use rand::prelude::*;
 use std::char;
 use std::collections::BTreeMap;
@@ -26,7 +25,7 @@ struct Opt {
 fn main() -> Result<()> {
     let opt = Opt::from_args();
     let generated_data = generate_data(opt.cols, opt.rows);
-    datafile::serialize_to_csv(&opt.file, &generated_data)?;
+    generated_data.serialize(&opt.file)?;
     Ok(())
 }
 
