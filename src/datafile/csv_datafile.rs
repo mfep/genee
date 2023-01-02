@@ -1,7 +1,8 @@
 //! Structures and functions related to parsing and processing
 //! CSV files that contain habit data
+use super::{DiaryDataConnection, SuccessfulUpdate};
 use anyhow::{bail, Context, Result};
-use chrono::{Duration, NaiveDate};
+use chrono::NaiveDate;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
@@ -14,30 +15,6 @@ pub const DELIMETER: char = ',';
 /// For example: 2020-01-25
 pub const DATE_FORMAT: &str = "%Y-%m-%d";
 
-pub trait DiaryDataConnection {
-    /// Calculates the occurences of all habits over multiple periods of date ranges.
-    fn calculate_data_counts_per_iter(
-        &self,
-        date_ranges: &[(NaiveDate, NaiveDate)],
-    ) -> Vec<Vec<usize>>;
-
-    /// Modifies the provided `DiaryData` instance with the provided data row and date.
-    fn update_data(&mut self, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate>;
-
-    /// Tries to write a `DiaryData` instance to the disk at the specified path.
-    /// This replaces any existing file (given the process has permission).
-    fn serialize(&self, path: &Path) -> Result<()>;
-
-    /// Returns a vector of missing dates between the first date in the database until specified date.
-    fn get_missing_dates(&self, from: &Option<NaiveDate>, until: &NaiveDate) -> Vec<NaiveDate>;
-
-    fn get_header(&self) -> &[String];
-
-    fn get_row(&self, date: &NaiveDate) -> Option<&Vec<bool>>;
-
-    fn is_empty(&self) -> bool;
-}
-
 /// A complete in-memory representation of the data file.
 #[derive(Debug, Default)]
 pub struct DiaryData {
@@ -48,8 +25,7 @@ pub struct DiaryData {
     pub data: BTreeMap<NaiveDate, Vec<bool>>,
 }
 
-/// Tries to read data file to memory.
-pub fn open_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
+pub fn open_csv_datafile(path: &Path) -> Result<DiaryData> {
     let mut reader = get_datafile_reader(path)?;
     let mut data = DiaryData {
         header: read_header(&mut reader)?,
@@ -83,7 +59,7 @@ pub fn open_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
         }
         data.data.insert(current_date, row_data);
     }
-    Ok(Box::new(data))
+    Ok(data)
 }
 
 /// Calculates the occurences of all habits in the prescribed date interval.
@@ -101,28 +77,6 @@ fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate) -> 
         }
     }
     result
-}
-
-/// Calculates the date ranges according to the parameters.
-/// For example when `range_size == 30`, `iters == 3` and `from_date` is today,
-/// the result is a 3-element vector containing ranges of the last 30 days,
-/// the 30 days before that, and the 30 days before the latter one.
-pub fn get_date_ranges(
-    from_date: &NaiveDate,
-    range_size: usize,
-    iters: usize,
-) -> Vec<(NaiveDate, NaiveDate)> {
-    let start_offsets = (0..range_size * iters).step_by(range_size);
-    let end_offsets = (range_size - 1..range_size * (iters + 1)).step_by(range_size);
-    start_offsets
-        .zip(end_offsets)
-        .map(|(start, end)| {
-            (
-                *from_date - Duration::days(start as i64),
-                *from_date - Duration::days(end as i64),
-            )
-        })
-        .collect()
 }
 
 impl DiaryDataConnection for DiaryData {
@@ -187,16 +141,6 @@ impl DiaryDataConnection for DiaryData {
     }
 }
 
-/// Result of an update to a `DiaryData` instance.
-pub enum SuccessfulUpdate {
-    /// The new date was not present in the instance, but it was added.
-    AddedNew,
-
-    /// The date was already present in the instance, but was replaced.
-    /// This element contains the original data row.
-    ReplacedExisting(Vec<bool>),
-}
-
 /// Formats a data row with a date to `String`.
 fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
     let formatted_date = date.format(DATE_FORMAT);
@@ -257,31 +201,9 @@ fn test_calculate_data_counts_per_iter() {
         .insert(NaiveDate::from_ymd(2021, 1, 4), vec![true, true, true]);
     data.data
         .insert(NaiveDate::from_ymd(2021, 1, 5), vec![true, false, false]);
-    let ranges = get_date_ranges(&NaiveDate::from_ymd(2021, 1, 5), 2, 3);
+    let ranges = super::get_date_ranges(&NaiveDate::from_ymd(2021, 1, 5), 2, 3);
     let result = data.calculate_data_counts_per_iter(&ranges);
     assert_eq!(vec![vec![2, 1, 1], vec![2, 1, 0], vec![1, 0, 0],], result);
-}
-
-#[test]
-fn test_get_date_ranges() {
-    let result = get_date_ranges(&NaiveDate::from_ymd(2000, 5, 30), 5, 3);
-    assert_eq!(
-        vec![
-            (
-                NaiveDate::from_ymd(2000, 5, 30),
-                NaiveDate::from_ymd(2000, 5, 26)
-            ),
-            (
-                NaiveDate::from_ymd(2000, 5, 25),
-                NaiveDate::from_ymd(2000, 5, 21)
-            ),
-            (
-                NaiveDate::from_ymd(2000, 5, 20),
-                NaiveDate::from_ymd(2000, 5, 16)
-            ),
-        ],
-        result
-    );
 }
 
 #[test]

@@ -1,9 +1,8 @@
 use anyhow::Result;
-use chrono::{Duration, Local};
-use genee::datafile::{DiaryData, DiaryDataConnection};
+use chrono::{Duration, Local, NaiveDate};
+use genee::datafile;
 use rand::prelude::*;
 use std::char;
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -24,26 +23,36 @@ struct Opt {
 
 fn main() -> Result<()> {
     let opt = Opt::from_args();
-    let generated_data = generate_data(opt.cols, opt.rows);
-    generated_data.serialize(&opt.file)?;
+    let headers = generate_header(opt.cols);
+    datafile::create_new_datafile(&opt.file, &headers)?;
+    let mut data = datafile::open_datafile(&opt.file)?;
+    for (date, row) in generate_data(opt.cols, opt.rows) {
+        data.update_data(&date, &row)?;
+    }
+    data.serialize(&opt.file)?;
     Ok(())
 }
 
-fn generate_data(cols: usize, rows: usize) -> DiaryData {
+fn generate_header(cols: usize) -> Vec<String> {
     let mut rng = rand::thread_rng();
     let mut header = vec![];
     for _col in 0..cols {
         let rand_char = A_IDX + rng.next_u32() % (Z_IDX - A_IDX);
         header.push(String::from(char::from_u32(rand_char).unwrap()));
     }
-    let mut data = BTreeMap::default();
+    header
+}
+
+fn generate_data(cols: usize, rows: usize) -> Vec<(NaiveDate, Vec<bool>)> {
+    let mut rng = rand::thread_rng();
+    let mut data = vec![];
     for row in 0..rows {
         let mut row_data = vec![];
         for _col in 0..cols {
             row_data.push(rng.gen_bool(0.5));
         }
         let date = Local::now().naive_local() + Duration::days(1 + row as i64 - rows as i64);
-        data.insert(date.date(), row_data);
+        data.push((date.date(), row_data));
     }
-    DiaryData { header, data }
+    data
 }

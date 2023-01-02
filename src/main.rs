@@ -300,7 +300,7 @@ fn create_new(path: &Path, headers_string: &str) -> Result<()> {
         }
         headers_vector.push(String::from(title));
     }
-    datafile::create_new_csv(path, &headers_vector)?;
+    datafile::create_new_datafile(path, &headers_vector)?;
     println!("New datafile successfully created at {}", path.display());
     Ok(())
 }
