@@ -210,17 +210,27 @@ fn test_calculate_data_counts_per_iter() {
         data: BTreeMap::default(),
         path: PathBuf::default(),
     };
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 1), vec![true, false, false]);
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 2), vec![true, false, false]);
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 3), vec![true, true, false]);
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 4), vec![true, true, true]);
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 5), vec![true, false, false]);
-    let ranges = super::get_date_ranges(&NaiveDate::from_ymd(2021, 1, 5), 2, 3);
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        vec![true, false, false],
+    );
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 2).unwrap(),
+        vec![true, false, false],
+    );
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 3).unwrap(),
+        vec![true, true, false],
+    );
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 4).unwrap(),
+        vec![true, true, true],
+    );
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 5).unwrap(),
+        vec![true, false, false],
+    );
+    let ranges = super::get_date_ranges(&NaiveDate::from_ymd_opt(2021, 1, 5).unwrap(), 2, 3);
     let result = data.calculate_data_counts_per_iter(&ranges);
     assert_eq!(vec![vec![2, 1, 1], vec![2, 1, 0], vec![1, 0, 0],], result);
 }
@@ -232,20 +242,30 @@ fn test_calculate_data_counts() {
         data: BTreeMap::default(),
         path: PathBuf::default(),
     };
-    data.data
-        .insert(NaiveDate::from_ymd(2020, 1, 1), vec![true, false, false]);
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 1), vec![true, false, false]);
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 2), vec![true, true, false]);
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 3), vec![true, true, true]);
-    data.data
-        .insert(NaiveDate::from_ymd(2021, 1, 4), vec![true, false, false]);
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        vec![true, false, false],
+    );
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        vec![true, false, false],
+    );
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 2).unwrap(),
+        vec![true, true, false],
+    );
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 3).unwrap(),
+        vec![true, true, true],
+    );
+    data.data.insert(
+        NaiveDate::from_ymd_opt(2021, 1, 4).unwrap(),
+        vec![true, false, false],
+    );
     let result = calculate_data_counts(
         &data,
-        &NaiveDate::from_ymd(2020, 8, 5),
-        &NaiveDate::from_ymd(2021, 1, 3),
+        &NaiveDate::from_ymd_opt(2020, 8, 5).unwrap(),
+        &NaiveDate::from_ymd_opt(2021, 1, 3).unwrap(),
     );
     assert_eq!(vec![3, 2, 1], result);
 }

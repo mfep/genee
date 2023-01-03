@@ -104,7 +104,7 @@ fn main() -> Result<()> {
         Command::Graph { ref from_date } => {
             let data = datafile::open_datafile(datafile_path)?;
             let from_date = parse_from_date(from_date)?;
-            let from_date = from_date.unwrap_or_else(|| Local::today().naive_local());
+            let from_date = from_date.unwrap_or_else(|| Local::now().naive_local().date());
             plot_datafile(&opt, &from_date, &*data)?;
         }
         Command::Insert { ref date, no_graph } => {
@@ -155,12 +155,13 @@ fn parse_from_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
 }
 
 fn get_graph_date(data: &dyn DiaryDataConnection) -> Result<NaiveDate> {
-    let today = Local::today().naive_local();
+    let today = Local::now().naive_local().date();
     if data.get_row(&today).is_some() {
         Ok(today)
     } else {
-        Local::today()
+        Local::now()
             .naive_local()
+            .date()
             .checked_sub_signed(chrono::Duration::days(1))
             .ok_or_else(|| anyhow::Error::msg("Could not get yesterday"))
     }
@@ -245,8 +246,9 @@ fn fill_datafile(
     let mut missing_dates = data.get_missing_dates(from_date, to_date);
     if data.is_empty() {
         missing_dates.push(
-            Local::today()
+            Local::now()
                 .naive_local()
+                .date()
                 .checked_sub_signed(Duration::days(1))
                 .unwrap(),
         );

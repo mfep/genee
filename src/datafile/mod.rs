@@ -77,20 +77,20 @@ pub fn create_new_datafile(path: &Path, headers: &[String]) -> Result<()> {
 
 #[test]
 fn test_get_date_ranges() {
-    let result = get_date_ranges(&NaiveDate::from_ymd(2000, 5, 30), 5, 3);
+    let result = get_date_ranges(&NaiveDate::from_ymd_opt(2000, 5, 30).unwrap(), 5, 3);
     assert_eq!(
         vec![
             (
-                NaiveDate::from_ymd(2000, 5, 30),
-                NaiveDate::from_ymd(2000, 5, 26)
+                NaiveDate::from_ymd_opt(2000, 5, 30).unwrap(),
+                NaiveDate::from_ymd_opt(2000, 5, 26).unwrap()
             ),
             (
-                NaiveDate::from_ymd(2000, 5, 25),
-                NaiveDate::from_ymd(2000, 5, 21)
+                NaiveDate::from_ymd_opt(2000, 5, 25).unwrap(),
+                NaiveDate::from_ymd_opt(2000, 5, 21).unwrap()
             ),
             (
-                NaiveDate::from_ymd(2000, 5, 20),
-                NaiveDate::from_ymd(2000, 5, 16)
+                NaiveDate::from_ymd_opt(2000, 5, 20).unwrap(),
+                NaiveDate::from_ymd_opt(2000, 5, 16).unwrap()
             ),
         ],
         result
