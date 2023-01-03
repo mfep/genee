@@ -96,7 +96,7 @@ fn main() -> Result<()> {
             let from_date = parse_from_date(from_date)?;
             let mut data = datafile::open_datafile(datafile_path)?;
             let to_date = get_graph_date(&*data)?;
-            fill_datafile(datafile_path, &from_date, &to_date, &mut *data)?;
+            fill_datafile(&from_date, &to_date, &mut *data)?;
             if !no_graph {
                 plot_datafile(&opt, &to_date, &*data)?;
             }
@@ -110,7 +110,7 @@ fn main() -> Result<()> {
         Command::Insert { ref date, no_graph } => {
             let date = parse_from_date(&Some(date.clone()))?.unwrap();
             let mut data = datafile::open_datafile(datafile_path)?;
-            insert_to_datafile(datafile_path, &date, &mut *data)?;
+            insert_to_datafile(&date, &mut *data)?;
             if !no_graph {
                 plot_datafile(&opt, &date, &*data)?;
             }
@@ -238,7 +238,6 @@ fn input_day_interactively(data: &mut dyn DiaryDataConnection, date: &NaiveDate)
 }
 
 fn fill_datafile(
-    datafile_path: &Path,
     from_date: &Option<NaiveDate>,
     to_date: &NaiveDate,
     data: &mut dyn DiaryDataConnection,
@@ -255,17 +254,11 @@ fn fill_datafile(
     for date in missing_dates {
         input_day_interactively(data, &date)?;
     }
-    data.serialize(datafile_path)?;
     Ok(())
 }
 
-fn insert_to_datafile(
-    datafile_path: &Path,
-    date: &NaiveDate,
-    data: &mut dyn DiaryDataConnection,
-) -> Result<()> {
+fn insert_to_datafile(date: &NaiveDate, data: &mut dyn DiaryDataConnection) -> Result<()> {
     input_day_interactively(data, date)?;
-    data.serialize(datafile_path)?;
     Ok(())
 }
 

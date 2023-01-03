@@ -28,10 +28,6 @@ pub trait DiaryDataConnection {
     /// Modifies the provided `DiaryDataConnection` instance with the provided data row and date.
     fn update_data(&mut self, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate>;
 
-    /// Tries to write a `DiaryDataConnection` instance to the disk at the specified path.
-    /// This replaces any existing file (given the process has permission).
-    fn serialize(&self, path: &Path) -> Result<()>;
-
     /// Returns a vector of missing dates between the first date in the database until specified date.
     fn get_missing_dates(&self, from: &Option<NaiveDate>, until: &NaiveDate) -> Vec<NaiveDate>;
 

@@ -29,7 +29,6 @@ fn main() -> Result<()> {
     for (date, row) in generate_data(opt.cols, opt.rows) {
         data.update_data(&date, &row)?;
     }
-    data.serialize(&opt.file)?;
     Ok(())
 }
 

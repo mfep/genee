@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
+use std::path::PathBuf;
 
 /// Delimeter character used in the CSV data files.
 const DELIMETER: char = ',';
@@ -20,10 +21,13 @@ pub const DATE_FORMAT: &str = "%Y-%m-%d";
 #[derive(Debug, Default)]
 struct DiaryDataCsv {
     /// Header of the data file, containing the names/abbreviations of the tracked habits.
-    pub header: Vec<String>,
+    header: Vec<String>,
 
     /// Entries in the data file.
-    pub data: BTreeMap<NaiveDate, Vec<bool>>,
+    data: BTreeMap<NaiveDate, Vec<bool>>,
+
+    /// Path to the original CSV file
+    path: PathBuf,
 }
 
 /// Reads a CSV datafile to memory and returns the result boxed.
@@ -32,6 +36,7 @@ pub fn open_csv_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
     let mut data = DiaryDataCsv {
         header: read_header(&mut reader)?,
         data: BTreeMap::default(),
+        path: path.to_path_buf(),
     };
     for (i, line) in reader.lines().enumerate() {
         let line = line.context("Cannot read data file")?;
@@ -102,16 +107,6 @@ impl DiaryDataConnection for DiaryDataCsv {
         }
     }
 
-    fn serialize(&self, path: &Path) -> Result<()> {
-        let mut file = File::create(path).context("Could not open file for writing")?;
-        let header = self.header.join(&String::from(DELIMETER));
-        writeln!(file, "date,{}", header)?;
-        for (date, data) in &self.data {
-            writeln!(file, "{}", serialize_row(date, data))?;
-        }
-        Ok(())
-    }
-
     fn get_missing_dates(&self, from: &Option<NaiveDate>, until: &NaiveDate) -> Vec<NaiveDate> {
         if from.is_none() && self.data.is_empty() {
             return vec![];
@@ -143,6 +138,27 @@ impl DiaryDataConnection for DiaryDataCsv {
     }
 }
 
+impl Drop for DiaryDataCsv {
+    fn drop(&mut self) {
+        let file = File::create(&self.path);
+        if file.is_err() {
+            return;
+        }
+        let mut file = file.unwrap();
+        let header = self.header.join(&String::from(DELIMETER));
+        let result = writeln!(file, "date,{}", header);
+        if result.is_err() {
+            return;
+        }
+        for (date, data) in &self.data {
+            let result = writeln!(file, "{}", serialize_row(date, data));
+            if result.is_err() {
+                return;
+            }
+        }
+    }
+}
+
 /// Formats a data row with a date to `String`.
 fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
     let formatted_date = date.format(DATE_FORMAT);
@@ -153,14 +169,14 @@ fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
 
 /// Creates a new CSV data file at the specified path from a header list.
 pub fn create_new_csv(path: &Path, headers: &[String]) -> Result<()> {
-    let data = DiaryDataCsv {
+    let _data = DiaryDataCsv {
         header: headers.to_vec(),
         data: BTreeMap::default(),
+        path: path.to_path_buf(),
     };
     if path.exists() {
         bail!(format!("A file already exists at \"{}\"", path.display()))
     }
-    data.serialize(path)?;
     Ok(())
 }
 
@@ -192,6 +208,7 @@ fn test_calculate_data_counts_per_iter() {
     let mut data = DiaryDataCsv {
         header: vec![String::from("A"), String::from("B"), String::from("C")],
         data: BTreeMap::default(),
+        path: PathBuf::default(),
     };
     data.data
         .insert(NaiveDate::from_ymd(2021, 1, 1), vec![true, false, false]);
@@ -213,6 +230,7 @@ fn test_calculate_data_counts() {
     let mut data = DiaryDataCsv {
         header: vec![String::from("A"), String::from("B"), String::from("C")],
         data: BTreeMap::default(),
+        path: PathBuf::default(),
     };
     data.data
         .insert(NaiveDate::from_ymd(2020, 1, 1), vec![true, false, false]);
