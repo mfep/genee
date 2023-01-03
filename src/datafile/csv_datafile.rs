@@ -10,14 +10,15 @@ use std::io::BufReader;
 use std::path::Path;
 
 /// Delimeter character used in the CSV data files.
-pub const DELIMETER: char = ',';
+const DELIMETER: char = ',';
+
 /// Format of the date string in the CSV data file.
 /// For example: 2020-01-25
 pub const DATE_FORMAT: &str = "%Y-%m-%d";
 
-/// A complete in-memory representation of the data file.
+/// A complete in-memory representation of the CSV data file.
 #[derive(Debug, Default)]
-pub struct DiaryData {
+struct DiaryDataCsv {
     /// Header of the data file, containing the names/abbreviations of the tracked habits.
     pub header: Vec<String>,
 
@@ -25,9 +26,10 @@ pub struct DiaryData {
     pub data: BTreeMap<NaiveDate, Vec<bool>>,
 }
 
-pub fn open_csv_datafile(path: &Path) -> Result<DiaryData> {
+/// Reads a CSV datafile to memory and returns the result boxed.
+pub fn open_csv_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
     let mut reader = get_datafile_reader(path)?;
-    let mut data = DiaryData {
+    let mut data = DiaryDataCsv {
         header: read_header(&mut reader)?,
         data: BTreeMap::default(),
     };
@@ -59,12 +61,12 @@ pub fn open_csv_datafile(path: &Path) -> Result<DiaryData> {
         }
         data.data.insert(current_date, row_data);
     }
-    Ok(data)
+    Ok(Box::new(data))
 }
 
 /// Calculates the occurences of all habits in the prescribed date interval.
 /// Both limits are inclusive.
-fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate) -> Vec<usize> {
+fn calculate_data_counts(data: &DiaryDataCsv, from: &NaiveDate, to: &NaiveDate) -> Vec<usize> {
     let mut result: Vec<usize> = data.header.iter().map(|_| 0).collect();
     for (date, data) in data.data.iter().rev() {
         if date < from || date > to {
@@ -79,7 +81,7 @@ fn calculate_data_counts(data: &DiaryData, from: &NaiveDate, to: &NaiveDate) -> 
     result
 }
 
-impl DiaryDataConnection for DiaryData {
+impl DiaryDataConnection for DiaryDataCsv {
     fn calculate_data_counts_per_iter(
         &self,
         date_ranges: &[(NaiveDate, NaiveDate)],
@@ -151,7 +153,7 @@ fn serialize_row(date: &NaiveDate, data: &[bool]) -> String {
 
 /// Creates a new CSV data file at the specified path from a header list.
 pub fn create_new_csv(path: &Path, headers: &[String]) -> Result<()> {
-    let data = DiaryData {
+    let data = DiaryDataCsv {
         header: headers.to_vec(),
         data: BTreeMap::default(),
     };
@@ -187,7 +189,7 @@ fn read_header(reader: &mut BufReader<File>) -> Result<Vec<String>> {
 
 #[test]
 fn test_calculate_data_counts_per_iter() {
-    let mut data = DiaryData {
+    let mut data = DiaryDataCsv {
         header: vec![String::from("A"), String::from("B"), String::from("C")],
         data: BTreeMap::default(),
     };
@@ -208,7 +210,7 @@ fn test_calculate_data_counts_per_iter() {
 
 #[test]
 fn test_calculate_data_counts() {
-    let mut data = DiaryData {
+    let mut data = DiaryDataCsv {
         header: vec![String::from("A"), String::from("B"), String::from("C")],
         data: BTreeMap::default(),
     };
