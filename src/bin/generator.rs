@@ -26,9 +26,7 @@ fn main() -> Result<()> {
     let headers = generate_header(opt.cols);
     datafile::create_new_datafile(&opt.file, &headers)?;
     let mut data = datafile::open_datafile(&opt.file)?;
-    for (date, row) in generate_data(opt.cols, opt.rows) {
-        data.update_data(&date, &row)?;
-    }
+    data.update_data_batch(&generate_data(opt.cols, opt.rows))?;
     Ok(())
 }
 

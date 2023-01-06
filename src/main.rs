@@ -156,7 +156,7 @@ fn parse_from_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
 
 fn get_graph_date(data: &dyn DiaryDataConnection) -> Result<NaiveDate> {
     let today = Local::now().naive_local().date();
-    if data.get_row(&today).is_some() {
+    if data.get_row(&today)?.is_some() {
         Ok(today)
     } else {
         Local::now()
@@ -223,10 +223,10 @@ fn input_day_interactively(data: &mut dyn DiaryDataConnection, date: &NaiveDate)
         "Enter habit data for date {}",
         date.format(datafile::DATE_FORMAT)
     );
-    let header = data.get_header();
+    let header = data.get_header()?;
     let selected_items = MultiSelect::new()
         .with_prompt(prompt)
-        .items(header)
+        .items(&header)
         .interact()?;
 
     let mut append_bools = vec![false; header.len()];
@@ -243,8 +243,8 @@ fn fill_datafile(
     to_date: &NaiveDate,
     data: &mut dyn DiaryDataConnection,
 ) -> Result<()> {
-    let mut missing_dates = data.get_missing_dates(from_date, to_date);
-    if data.is_empty() {
+    let mut missing_dates = data.get_missing_dates(from_date, to_date)?;
+    if data.is_empty()? {
         missing_dates.push(
             Local::now()
                 .naive_local()
@@ -274,7 +274,7 @@ fn plot_datafile(
             *last_date - chrono::Duration::days(opt.list_previous_days.unwrap() as i64 - 1i64);
         print!(
             "{}",
-            graphing::pretty_print_diary_rows(data, &start_day, last_date)
+            graphing::pretty_print_diary_rows(data, &start_day, last_date)?
         );
     }
     graphing::graph_last_n_days(

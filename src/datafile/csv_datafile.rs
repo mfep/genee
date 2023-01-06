@@ -90,11 +90,11 @@ impl DiaryDataConnection for DiaryDataCsv {
     fn calculate_data_counts_per_iter(
         &self,
         date_ranges: &[(NaiveDate, NaiveDate)],
-    ) -> Vec<Vec<usize>> {
-        date_ranges
+    ) -> Result<Vec<Vec<usize>>> {
+        Ok(date_ranges
             .iter()
             .map(|(start_date, end_date)| calculate_data_counts(self, end_date, start_date))
-            .collect()
+            .collect())
     }
 
     fn update_data(&mut self, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate> {
@@ -102,14 +102,25 @@ impl DiaryDataConnection for DiaryDataCsv {
             bail!("The provided update row does not match the datafile header in size");
         }
         match self.data.insert(*date, new_row.to_vec()) {
-            Some(replaced_row) => Ok(SuccessfulUpdate::ReplacedExisting(replaced_row)),
+            Some(_) => Ok(SuccessfulUpdate::ReplacedExisting),
             None => Ok(SuccessfulUpdate::AddedNew),
         }
     }
 
-    fn get_missing_dates(&self, from: &Option<NaiveDate>, until: &NaiveDate) -> Vec<NaiveDate> {
+    fn update_data_batch(&mut self, new_items: &[(NaiveDate, Vec<bool>)]) -> Result<()> {
+        for (date, row) in new_items {
+            self.update_data(date, row)?;
+        }
+        Ok(())
+    }
+
+    fn get_missing_dates(
+        &self,
+        from: &Option<NaiveDate>,
+        until: &NaiveDate,
+    ) -> Result<Vec<NaiveDate>> {
         if from.is_none() && self.data.is_empty() {
-            return vec![];
+            return Ok(vec![]);
         }
         let first_date = from.unwrap_or_else(|| *self.data.iter().next().unwrap().0);
         let mut result = vec![];
@@ -122,19 +133,19 @@ impl DiaryDataConnection for DiaryDataCsv {
                 .checked_add_signed(chrono::Duration::days(1))
                 .unwrap();
         }
-        result
+        Ok(result)
     }
 
-    fn get_header(&self) -> &[String] {
-        &self.header
+    fn get_header(&self) -> Result<Vec<String>> {
+        Ok(self.header.clone())
     }
 
-    fn get_row(&self, date: &NaiveDate) -> Option<&Vec<bool>> {
-        self.data.get(date)
+    fn get_row(&self, date: &NaiveDate) -> Result<Option<Vec<bool>>> {
+        Ok(self.data.get(date).cloned())
     }
 
-    fn is_empty(&self) -> bool {
-        self.data.is_empty()
+    fn is_empty(&self) -> Result<bool> {
+        Ok(self.data.is_empty())
     }
 }
 
@@ -231,7 +242,7 @@ fn test_calculate_data_counts_per_iter() {
         vec![true, false, false],
     );
     let ranges = super::get_date_ranges(&NaiveDate::from_ymd_opt(2021, 1, 5).unwrap(), 2, 3);
-    let result = data.calculate_data_counts_per_iter(&ranges);
+    let result = data.calculate_data_counts_per_iter(&ranges).unwrap();
     assert_eq!(vec![vec![2, 1, 1], vec![2, 1, 0], vec![1, 0, 0],], result);
 }
 
