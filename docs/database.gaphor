@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gaphor xmlns="http://gaphor.sourceforge.net/model" version="3.0" gaphor-version="2.15.0">
+<StyleSheet id="58d6989a-66f8-11ec-b4c8-0456e5e540ed"/>
+<Package id="58d6c2e8-66f8-11ec-b4c8-0456e5e540ed">
+<name>
+<val>genee</val>
+</name>
+<ownedDiagram>
+<reflist>
+<ref refid="58d6c536-66f8-11ec-b4c8-0456e5e540ed"/>
+</reflist>
+</ownedDiagram>
+<ownedType>
+<reflist>
+<ref refid="7c37dc0d-a489-11ed-a199-a18757cf118a"/>
+<ref refid="bf6c5a9a-a489-11ed-8b2e-a18757cf118a"/>
+<ref refid="4b42b6a2-a48a-11ed-979b-b3a2f0c20600"/>
+</reflist>
+</ownedType>
+</Package>
+<Diagram id="58d6c536-66f8-11ec-b4c8-0456e5e540ed">
+<element>
+<ref refid="58d6c2e8-66f8-11ec-b4c8-0456e5e540ed"/>
+</element>
+<name>
+<val>New diagram</val>
+</name>
+<ownedPresentation>
+<reflist>
+<ref refid="7c389c1f-a489-11ed-9f0d-a18757cf118a"/>
+<ref refid="bf6cc9de-a489-11ed-b60c-a18757cf118a"/>
+<ref refid="4b43935c-a48a-11ed-9014-b3a2f0c20600"/>
+<ref refid="e1cea76c-a48a-11ed-b8f0-b3a2f0c20600"/>
+<ref refid="fdcfd73f-a48a-11ed-ad60-b3a2f0c20600"/>
+</reflist>
+</ownedPresentation>
+</Diagram>
+<Class id="7c37dc0d-a489-11ed-a199-a18757cf118a">
+<name>
+<val>Category</val>
+</name>
+<ownedAttribute>
+<reflist>
+<ref refid="817e0f87-a489-11ed-b384-a18757cf118a"/>
+<ref refid="976a9aae-a489-11ed-8f7a-a18757cf118a"/>
+<ref refid="ab8ed13b-a489-11ed-ae36-a18757cf118a"/>
+</reflist>
+</ownedAttribute>
+<package>
+<ref refid="58d6c2e8-66f8-11ec-b4c8-0456e5e540ed"/>
+</package>
+<presentation>
+<reflist>
+<ref refid="7c389c1f-a489-11ed-9f0d-a18757cf118a"/>
+</reflist>
+</presentation>
+<supplierDependency>
+<reflist>
+<ref refid="e32aad72-a48a-11ed-9c39-b3a2f0c20600"/>
+</reflist>
+</supplierDependency>
+</Class>
+<ClassItem id="7c389c1f-a489-11ed-9f0d-a18757cf118a">
+<matrix>
+<val>(1.0, 0.0, 0.0, 1.0, 74.21482849121094, 92.14451599121094)</val>
+</matrix>
+<top-left>
+<val>(0.0, 0.0)</val>
+</top-left>
+<width>
+<val>209.0</val>
+</width>
+<height>
+<val>112.0</val>
+</height>
+<diagram>
+<ref refid="58d6c536-66f8-11ec-b4c8-0456e5e540ed"/>
+</diagram>
+<show_operations>
+<val>0</val>
+</show_operations>
+<subject>
+<ref refid="7c37dc0d-a489-11ed-a199-a18757cf118a"/>
+</subject>
+</ClassItem>
+<Property id="817e0f87-a489-11ed-b384-a18757cf118a">
+<class_>
+<ref refid="7c37dc0d-a489-11ed-a199-a18757cf118a"/>
+</class_>
+<name>
+<val>+ «pkey» categoryID: INTEGER</val>
+</name>
+</Property>
+<Property id="976a9aae-a489-11ed-8f7a-a18757cf118a">
+<class_>
+<ref refid="7c37dc0d-a489-11ed-a199-a18757cf118a"/>
+</class_>
+<name>
+<val>name</val>
+</name>
+<typeValue>
+<val>TEXT</val>
+</typeValue>
+</Property>
+<Property id="ab8ed13b-a489-11ed-ae36-a18757cf118a">
+<class_>
+<ref refid="7c37dc0d-a489-11ed-a199-a18757cf118a"/>
+</class_>
+<name>
+<val>createdAt</val>
+</name>
+<typeValue>
+<val>DATETIME</val>
+</typeValue>
+</Property>
+<Class id="bf6c5a9a-a489-11ed-8b2e-a18757cf118a">
+<name>
+<val>DateEntry</val>
+</name>
+<ownedAttribute>
+<reflist>
+<ref refid="cd033f08-a489-11ed-b1fa-a18757cf118a"/>
+<ref refid="f9c27f4c-a489-11ed-9054-a18757cf118a"/>
+</reflist>
+</ownedAttribute>
+<package>
+<ref refid="58d6c2e8-66f8-11ec-b4c8-0456e5e540ed"/>
+</package>
+<presentation>
+<reflist>
+<ref refid="bf6cc9de-a489-11ed-b60c-a18757cf118a"/>
+</reflist>
+</presentation>
+<supplierDependency>
+<reflist>
+<ref refid="ff444f14-a48a-11ed-9459-b3a2f0c20600"/>
+</reflist>
+</supplierDependency>
+</Class>
+<ClassItem id="bf6cc9de-a489-11ed-b60c-a18757cf118a">
+<matrix>
+<val>(1.0, 0.0, 0.0, 1.0, 825.9569702148438, 92.14451599121094)</val>
+</matrix>
+<top-left>
+<val>(0.0, 0.0)</val>
+</top-left>
+<width>
+<val>161.0</val>
+</width>
+<height>
+<val>92.0</val>
+</height>
+<diagram>
+<ref refid="58d6c536-66f8-11ec-b4c8-0456e5e540ed"/>
+</diagram>
+<show_operations>
+<val>0</val>
+</show_operations>
+<subject>
+<ref refid="bf6c5a9a-a489-11ed-8b2e-a18757cf118a"/>
+</subject>
+</ClassItem>
+<Property id="cd033f08-a489-11ed-b1fa-a18757cf118a">
+<class_>
+<ref refid="bf6c5a9a-a489-11ed-8b2e-a18757cf118a"/>
+</class_>
+<name>
+<val>+ «pkey» date: DATE</val>
+</name>
+</Property>
+<Property id="f9c27f4c-a489-11ed-9054-a18757cf118a">
+<class_>
+<ref refid="bf6c5a9a-a489-11ed-8b2e-a18757cf118a"/>
+</class_>
+<name>
+<val>createdAt</val>
+</name>
+<typeValue>
+<val>DATETIME</val>
+</typeValue>
+</Property>
+<Class id="4b42b6a2-a48a-11ed-979b-b3a2f0c20600">
+<clientDependency>
+<reflist>
+<ref refid="e32aad72-a48a-11ed-9c39-b3a2f0c20600"/>
+<ref refid="ff444f14-a48a-11ed-9459-b3a2f0c20600"/>
+</reflist>
+</clientDependency>
+<name>
+<val>EntryToCategories</val>
+</name>
+<ownedAttribute>
+<reflist>
+<ref refid="a99cba75-a48a-11ed-b8c0-b3a2f0c20600"/>
+<ref refid="adc5e4c1-a48a-11ed-8367-b3a2f0c20600"/>
+<ref refid="b2629fd7-a48a-11ed-b65c-b3a2f0c20600"/>
+</reflist>
+</ownedAttribute>
+<package>
+<ref refid="58d6c2e8-66f8-11ec-b4c8-0456e5e540ed"/>
+</package>
+<presentation>
+<reflist>
+<ref refid="4b43935c-a48a-11ed-9014-b3a2f0c20600"/>
+</reflist>
+</presentation>
+</Class>
+<ClassItem id="4b43935c-a48a-11ed-9014-b3a2f0c20600">
+<matrix>
+<val>(1.0, 0.0, 0.0, 1.0, 448.91796875, 92.14451599121094)</val>
+</matrix>
+<top-left>
+<val>(0.0, 0.0)</val>
+</top-left>
+<width>
+<val>188.0</val>
+</width>
+<height>
+<val>112.0</val>
+</height>
+<diagram>
+<ref refid="58d6c536-66f8-11ec-b4c8-0456e5e540ed"/>
+</diagram>
+<show_operations>
+<val>0</val>
+</show_operations>
+<subject>
+<ref refid="4b42b6a2-a48a-11ed-979b-b3a2f0c20600"/>
+</subject>
+</ClassItem>
+<Property id="a99cba75-a48a-11ed-b8c0-b3a2f0c20600">
+<class_>
+<ref refid="4b42b6a2-a48a-11ed-979b-b3a2f0c20600"/>
+</class_>
+<name>
+<val>«pkey» (categoryID, date)</val>
+</name>
+</Property>
+<Property id="adc5e4c1-a48a-11ed-8367-b3a2f0c20600">
+<class_>
+<ref refid="4b42b6a2-a48a-11ed-979b-b3a2f0c20600"/>
+</class_>
+<name>
+<val>date</val>
+</name>
+<typeValue>
+<val>DATE</val>
+</typeValue>
+</Property>
+<Property id="b2629fd7-a48a-11ed-b65c-b3a2f0c20600">
+<class_>
+<ref refid="4b42b6a2-a48a-11ed-979b-b3a2f0c20600"/>
+</class_>
+<name>
+<val>categoryID</val>
+</name>
+<typeValue>
+<val>INTEGER</val>
+</typeValue>
+</Property>
+<DependencyItem id="e1cea76c-a48a-11ed-b8f0-b3a2f0c20600">
+<diagram>
+<ref refid="58d6c536-66f8-11ec-b4c8-0456e5e540ed"/>
+</diagram>
+<horizontal>
+<val>0</val>
+</horizontal>
+<note>
+<val></val>
+</note>
+<subject>
+<ref refid="e32aad72-a48a-11ed-9c39-b3a2f0c20600"/>
+</subject>
+<matrix>
+<val>(1.0, 0.0, 0.0, 1.0, 446.55859375, 141.2147674560547)</val>
+</matrix>
+<points>
+<val>[(-163.34376525878906, -4.605377197265625), (2.359375, -4.605377197265625)]</val>
+</points>
+<head-connection>
+<ref refid="7c389c1f-a489-11ed-9f0d-a18757cf118a"/>
+</head-connection>
+<tail-connection>
+<ref refid="4b43935c-a48a-11ed-9014-b3a2f0c20600"/>
+</tail-connection>
+</DependencyItem>
+<Dependency id="e32aad72-a48a-11ed-9c39-b3a2f0c20600">
+<client>
+<ref refid="4b42b6a2-a48a-11ed-979b-b3a2f0c20600"/>
+</client>
+<name>
+<val>«fkey» categoryID</val>
+</name>
+<presentation>
+<reflist>
+<ref refid="e1cea76c-a48a-11ed-b8f0-b3a2f0c20600"/>
+</reflist>
+</presentation>
+<supplier>
+<ref refid="7c37dc0d-a489-11ed-a199-a18757cf118a"/>
+</supplier>
+</Dependency>
+<DependencyItem id="fdcfd73f-a48a-11ed-ad60-b3a2f0c20600">
+<diagram>
+<ref refid="58d6c536-66f8-11ec-b4c8-0456e5e540ed"/>
+</diagram>
+<horizontal>
+<val>0</val>
+</horizontal>
+<subject>
+<ref refid="ff444f14-a48a-11ed-9459-b3a2f0c20600"/>
+</subject>
+<matrix>
+<val>(1.0, 0.0, 0.0, 1.0, 633.7304077148438, 134.52345275878906)</val>
+</matrix>
+<points>
+<val>[(192.2265625, 2.0859375), (3.18756103515625, 0.0)]</val>
+</points>
+<head-connection>
+<ref refid="bf6cc9de-a489-11ed-b60c-a18757cf118a"/>
+</head-connection>
+<tail-connection>
+<ref refid="4b43935c-a48a-11ed-9014-b3a2f0c20600"/>
+</tail-connection>
+</DependencyItem>
+<Dependency id="ff444f14-a48a-11ed-9459-b3a2f0c20600">
+<client>
+<ref refid="4b42b6a2-a48a-11ed-979b-b3a2f0c20600"/>
+</client>
+<name>
+<val>«fkey» date</val>
+</name>
+<presentation>
+<reflist>
+<ref refid="fdcfd73f-a48a-11ed-ad60-b3a2f0c20600"/>
+</reflist>
+</presentation>
+<supplier>
+<ref refid="bf6c5a9a-a489-11ed-8b2e-a18757cf118a"/>
+</supplier>
+</Dependency>
+</gaphor>

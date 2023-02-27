@@ -1,6 +1,6 @@
 //! Functions for displaying habit data on the terminal.
 use crate::datafile;
-use crate::datafile::DiaryData;
+use crate::datafile::DiaryDataConnection;
 use anyhow::{bail, Result};
 use chrono::NaiveDate;
 use std::fmt::Write;
@@ -16,7 +16,7 @@ const COLORS: &[Color] = &[
 
 /// Prints colored habit data sums to stdout.
 pub fn graph_last_n_days(
-    data: &DiaryData,
+    data: &dyn DiaryDataConnection,
     last_date: &NaiveDate,
     period: usize,
     iters: usize,
@@ -26,31 +26,26 @@ pub fn graph_last_n_days(
         bail!("Graph height must be at least 10");
     }
     let date_ranges = datafile::get_date_ranges(last_date, period, iters);
-    let count_vectors = datafile::calculate_data_counts_per_iter(data, &date_ranges);
-    let rows = generate_rows(&data.header, &count_vectors, max_width)?;
+    let count_vectors = data.calculate_data_counts_per_iter(&date_ranges)?;
+    let rows = generate_rows(&data.get_header()?, &count_vectors, max_width)?;
     println!("{}{}", format_ranges(&date_ranges, max_width), rows);
     Ok(())
-}
-
-/// Prints a header and a single row in a nice tabular way.
-pub fn pretty_print_diary_row(data: &DiaryData, date: &NaiveDate) -> String {
-    pretty_print_diary_rows(data, date, date)
 }
 
 /// Prints the diary table with header between the begin and end date.
 /// Both limits inclusive.
 pub fn pretty_print_diary_rows(
-    data: &DiaryData,
+    data: &dyn DiaryDataConnection,
     begin_date: &NaiveDate,
     end_date: &NaiveDate,
-) -> String {
+) -> Result<String> {
     let mut ret = String::new();
-    ret += &pretty_print_header(&data.header);
+    ret += &pretty_print_header(&data.get_header()?);
     let mut current_date = *begin_date;
     while &current_date <= end_date {
-        let current_row = data.data.get(&current_date);
+        let current_row = data.get_row(&current_date)?;
         if let Some(row) = current_row {
-            ret += &pretty_print_row(&current_date, row);
+            ret += &pretty_print_row(&current_date, &row);
         } else {
             _ = writeln!(
                 ret,
@@ -60,7 +55,7 @@ pub fn pretty_print_diary_rows(
         }
         current_date += chrono::Duration::days(1);
     }
-    ret
+    Ok(ret)
 }
 
 fn pretty_print_header(headers: &[String]) -> String {

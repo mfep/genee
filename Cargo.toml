@@ -2,7 +2,7 @@
 name = "genee"
 version = "0.6.0"
 authors = ["Lőrinc Serfőző <lorinc.serfozo@mailbox.org>"]
-edition = "2018"
+edition = "2021"
 default-run = "genee"
 description = "A habit tracker app with command-line interface"
 license = "MIT"
@@ -23,3 +23,4 @@ directories-next = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
 dialoguer = "0.9"
+rusqlite = { version = "0.28.0", features = ["bundled"] }
