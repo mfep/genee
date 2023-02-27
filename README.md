@@ -5,7 +5,7 @@ genee is a simple habit tracker program for the command line
 
 ## Features
 - Daily tracking of habits 📅
-- Open storage format: simple CSV files 📄
+- Open storage format: SQLite database or simple CSV files 📄
 - Pretty diagrams to compare successive periods of habit data 📊
 - Store default settings persistently 💾
 
@@ -43,8 +43,9 @@ FLAGS:
 
 OPTIONS:
     -d, --datafile <datafile>
-            Path to the diary file. When not provided, its value is loaded from persistent configuration file
-
+            Path to the diary file. If the file extension is csv, then the file is assumed to be a CSV text file.
+            Otherwise it is assumed to be an SQLite database. When not provided, its value is loaded from persistent
+            configuration file
     -g, --graph-days <graph-days>
             How many days each period should contain. When not provided, its value is loaded from persistent
             configuration file
@@ -59,9 +60,10 @@ OPTIONS:
             loaded from persistent configuration file
 
 SUBCOMMANDS:
+    export         Writes the contents of the datafile into a new datafile. Useful to convert between formats
     fill           If set, habit information for all the missing days is queried between --from-date and yesterday.
                    If --from-date is not set, all the missing days are queried between the first entry in the diary
-                   and yesterday
+                   and yesterday. If there is no entry in the diary, only yesterday is queried
     graph          Displays the habit data according to the specified options to the terminal
     help           Prints this message or the help of the given subcommand(s)
     insert         Queries for habit information on the specified date
