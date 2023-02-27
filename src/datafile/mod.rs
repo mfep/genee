@@ -46,6 +46,8 @@ pub trait DiaryDataConnection {
 
     /// Returns if the database contains any records.
     fn is_empty(&self) -> Result<bool>;
+
+    fn get_date_range(&self) -> Result<(NaiveDate, NaiveDate)>;
 }
 
 /// Tries to read data file to memory.

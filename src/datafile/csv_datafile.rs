@@ -147,6 +147,16 @@ impl DiaryDataConnection for DiaryDataCsv {
     fn is_empty(&self) -> Result<bool> {
         Ok(self.data.is_empty())
     }
+
+    fn get_date_range(&self) -> Result<(NaiveDate, NaiveDate)> {
+        if self.is_empty()? {
+            bail!("Cannot get date range, datafile is empty")
+        }
+        Ok((
+            *self.data.first_key_value().unwrap().0,
+            *self.data.last_key_value().unwrap().0,
+        ))
+    }
 }
 
 impl Drop for DiaryDataCsv {
@@ -279,4 +289,8 @@ fn test_calculate_data_counts() {
         &NaiveDate::from_ymd_opt(2021, 1, 3).unwrap(),
     );
     assert_eq!(vec![3, 2, 1], result);
+
+    let (min_date, max_date) = data.get_date_range().unwrap();
+    assert_eq!(min_date, NaiveDate::from_ymd_opt(2020, 1, 1).unwrap());
+    assert_eq!(max_date, NaiveDate::from_ymd_opt(2021, 1, 4).unwrap());
 }

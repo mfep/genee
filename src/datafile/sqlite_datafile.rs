@@ -1,5 +1,5 @@
 //! Handling SQLite habit databases.
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use chrono::{NaiveDate, NaiveDateTime};
 use std::path::Path;
 
@@ -192,6 +192,26 @@ impl DiaryDataConnection for DiaryDataSqlite {
         let count: usize = statement.query_row([], |row| row.get(0))?;
         Ok(count == 0)
     }
+
+    fn get_date_range(&self) -> Result<(NaiveDate, NaiveDate)> {
+        if self.is_empty()? {
+            bail!("Cannot get date range, datafile is empty")
+        }
+
+        let mut statement = self
+            .connection
+            .prepare("SELECT MIN(date), MAX(date) FROM DateEntry")?;
+        let mut rows = statement.query([])?;
+        let row = rows.next()?.unwrap();
+        let min_date = NaiveDateTime::from_timestamp_opt(row.get(0)?, 0)
+            .unwrap()
+            .date();
+        let max_date = NaiveDateTime::from_timestamp_opt(row.get(1)?, 0)
+            .unwrap()
+            .date();
+
+        Ok((min_date, max_date))
+    }
 }
 
 impl DiaryDataSqlite {
@@ -327,4 +347,14 @@ fn test_sqlite() {
         )])
         .unwrap();
     assert_eq!(data_counts, vec![vec![0, 2, 1]]);
+
+    let (min_date, max_date) = datafile.get_date_range().unwrap();
+    assert_eq!(
+        min_date,
+        chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap()
+    );
+    assert_eq!(
+        max_date,
+        chrono::NaiveDate::from_ymd_opt(2023, 3, 3).unwrap()
+    );
 }

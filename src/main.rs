@@ -13,7 +13,8 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 #[structopt(about)]
 struct CliOptions {
-    /// Path to the diary file.
+    /// Path to the diary file. If the file extension is csv, then the file is assumed to be a CSV text file.
+    /// Otherwise it is assumed to be an SQLite database.
     /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(short, long, parse(from_os_str))]
     datafile: Option<PathBuf>,
@@ -83,6 +84,9 @@ enum Command {
 
     /// Saves the specified options to persistent configuration.
     SaveConfig,
+
+    /// Writes the contents of the datafile into a new datafile. Useful to convert between formats.
+    Export { exported_path: PathBuf },
 }
 
 fn main() -> Result<()> {
@@ -128,6 +132,9 @@ fn main() -> Result<()> {
         }
         Command::SaveConfig => {
             save_config(&opt)?;
+        }
+        Command::Export { ref exported_path } => {
+            export_datafile(datafile_path, exported_path)?;
         }
     }
 
@@ -297,5 +304,32 @@ fn create_new(path: &Path, headers_string: &str) -> Result<()> {
     }
     datafile::create_new_datafile(path, &headers_vector)?;
     println!("New datafile successfully created at {}", path.display());
+    Ok(())
+}
+
+fn export_datafile(path: &Path, exported_path: &Path) -> Result<()> {
+    if path == exported_path {
+        bail!("Cannot export datafile to the source path")
+    }
+
+    // Read all rows from the current datafile to memory
+    let data = datafile::open_datafile(path)?;
+    let (min_date, max_date) = data.get_date_range()?;
+    let mut rows = vec![];
+    let mut current_date = min_date;
+    while current_date <= max_date {
+        let current_row_opt = data.get_row(&current_date)?;
+        if let Some(current_row) = current_row_opt {
+            rows.push((current_date, current_row));
+        }
+        current_date += chrono::Duration::days(1);
+    }
+
+    // Create and update new datafile
+    let headers = data.get_header()?;
+    datafile::create_new_datafile(exported_path, &headers)?;
+    let mut new_data = datafile::open_datafile(exported_path)?;
+    new_data.update_data_batch(&rows)?;
+
     Ok(())
 }
