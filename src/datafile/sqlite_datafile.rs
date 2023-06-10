@@ -1,10 +1,10 @@
 //! Handling SQLite habit databases.
 use anyhow::{bail, Context, Result};
 use chrono::{NaiveDate, NaiveDateTime};
-use std::path::Path;
+use std::{ffi::OsString, path::Path};
 
 use super::DiaryDataConnection;
-use rusqlite::{params, Connection};
+use rusqlite::{backup, params, Connection};
 
 struct DiaryDataSqlite {
     connection: Connection,
@@ -47,6 +47,18 @@ pub fn open_sqlite_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>>
     let data = DiaryDataSqlite {
         connection: Connection::open(path).context("Could not open SQLite database")?,
     };
+    {
+        let mut backup_ext = OsString::from(path.extension().unwrap_or_default());
+        backup_ext.push(".bak");
+        let backup_path = path.with_extension(backup_ext);
+        let mut backup_connection =
+            Connection::open(backup_path).context("Could not open SQLite database for backup")?;
+        let backup = backup::Backup::new(&data.connection, &mut backup_connection)
+            .context("Could not initiate database backup")?;
+        backup
+            .run_to_completion(10, std::time::Duration::default(), None)
+            .context("Could not perform backup")?;
+    }
     Ok(Box::new(data))
 }
 
