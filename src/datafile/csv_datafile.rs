@@ -87,6 +87,10 @@ fn calculate_data_counts(data: &DiaryDataCsv, from: &NaiveDate, to: &NaiveDate) 
 }
 
 impl DiaryDataConnection for DiaryDataCsv {
+    fn into_any(self: Box<Self>) -> Box<dyn std::any::Any> {
+        self
+    }
+
     fn calculate_data_counts_per_iter(
         &self,
         date_ranges: &[(NaiveDate, NaiveDate)],
@@ -156,6 +160,14 @@ impl DiaryDataConnection for DiaryDataCsv {
             *self.data.first_key_value().unwrap().0,
             *self.data.last_key_value().unwrap().0,
         ))
+    }
+
+    fn add_category(&self, _name: &str) -> Result<super::AddCategoryResult> {
+        todo!();
+    }
+
+    fn hide_category(&self, _name: &str) -> Result<super::HideCategoryResult> {
+        todo!();
     }
 }
 

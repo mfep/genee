@@ -17,8 +17,36 @@ pub enum SuccessfulUpdate {
     ReplacedExisting,
 }
 
+/// Result from the call to `add_category`
+#[derive(Debug, PartialEq)]
+pub enum AddCategoryResult {
+    /// Created a new category
+    AddedNew,
+
+    /// Made a previously hidden category visible again
+    Unhide,
+
+    /// The category is already present and is visible
+    AlreadyPresent,
+}
+
+/// Result from the call to `hide_category`
+#[derive(Debug, PartialEq)]
+pub enum HideCategoryResult {
+    /// The specified category was visible previously and was hidden
+    Hidden,
+
+    /// The specified category is already hidden, nothing was changed
+    AlreadyHidden,
+
+    /// The specified category does not exist
+    NonExistingCategory,
+}
+
 /// Represents a connection to the diary database.
 pub trait DiaryDataConnection {
+    fn into_any(self: Box<Self>) -> Box<dyn std::any::Any>;
+
     /// Calculates the occurences of all habits over multiple periods of date ranges.
     fn calculate_data_counts_per_iter(
         &self,
@@ -47,7 +75,14 @@ pub trait DiaryDataConnection {
     /// Returns if the database contains any records.
     fn is_empty(&self) -> Result<bool>;
 
+    /// Returns the earliest and latest date among the database records.
     fn get_date_range(&self) -> Result<(NaiveDate, NaiveDate)>;
+
+    /// Adds or unhides the specified category in the database.
+    fn add_category(&self, name: &str) -> Result<AddCategoryResult>;
+
+    /// Hides the specified category in the database.
+    fn hide_category(&self, name: &str) -> Result<HideCategoryResult>;
 }
 
 /// Tries to read data file to memory.
