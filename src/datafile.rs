@@ -118,7 +118,7 @@ pub fn get_date_ranges(
 
 /// Create a new database on the prescribed path, using the prescribed headers.
 pub fn create_new_datafile(path: &Path, headers: &[String]) -> Result<()> {
-    if path.ends_with(".csv") {
+    if path.extension().is_some_and(|ext| ext == "csv") {
         csv_datafile::create_new_csv(path, headers)?;
     } else {
         sqlite_datafile::create_new_sqlite(path, headers)?;
