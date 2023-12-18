@@ -20,8 +20,7 @@ fn insert_version_to_db(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-pub fn create_new_sqlite(path: &Path, headers: &[String]) -> Result<()> {
-    let conn = Connection::open(path).context("Could not open/create SQLite database")?;
+fn initialize_sqlite_database(conn: &Connection, headers: &[String]) -> Result<()> {
     conn.execute_batch(
         "BEGIN;
         DROP TABLE IF EXISTS Info;
@@ -50,7 +49,7 @@ pub fn create_new_sqlite(path: &Path, headers: &[String]) -> Result<()> {
         );
         COMMIT;",
     )?;
-    insert_version_to_db(&conn)?;
+    insert_version_to_db(conn)?;
     let now = chrono::Local::now().timestamp();
     for header in headers {
         conn.execute(
@@ -61,22 +60,14 @@ pub fn create_new_sqlite(path: &Path, headers: &[String]) -> Result<()> {
     Ok(())
 }
 
-pub fn open_sqlite_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
-    let data = DiaryDataSqlite {
-        connection: Connection::open(path).context("Could not open SQLite database")?,
-    };
-    {
-        let mut backup_ext = OsString::from(path.extension().unwrap_or_default());
-        backup_ext.push(".bak");
-        let backup_path = path.with_extension(backup_ext);
-        let mut backup_connection =
-            Connection::open(backup_path).context("Could not open SQLite database for backup")?;
-        let backup = backup::Backup::new(&data.connection, &mut backup_connection)
-            .context("Could not initiate database backup")?;
-        backup
-            .run_to_completion(10, std::time::Duration::default(), None)
-            .context("Could not perform backup")?;
-    }
+pub fn create_new_sqlite(path: &Path, headers: &[String]) -> Result<()> {
+    let conn = Connection::open(path).context("Could not open/create SQLite database")?;
+    initialize_sqlite_database(&conn, headers)?;
+    Ok(())
+}
+
+fn open_sqlite_database(connection: Connection) -> Result<Box<dyn DiaryDataConnection>> {
+    let data = DiaryDataSqlite { connection };
     let db_version = data.get_db_version()?;
     if db_version < CURRENT_DB_VERSION {
         println!(
@@ -86,6 +77,23 @@ pub fn open_sqlite_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>>
         data.update_db()?;
     }
     Ok(Box::new(data))
+}
+
+pub fn open_sqlite_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
+    let connection = Connection::open(path).context("Could not open SQLite database")?;
+    {
+        let mut backup_ext = OsString::from(path.extension().unwrap_or_default());
+        backup_ext.push(".bak");
+        let backup_path = path.with_extension(backup_ext);
+        let mut backup_connection =
+            Connection::open(backup_path).context("Could not open SQLite database for backup")?;
+        let backup = backup::Backup::new(&connection, &mut backup_connection)
+            .context("Could not initiate database backup")?;
+        backup
+            .run_to_completion(10, std::time::Duration::default(), None)
+            .context("Could not perform backup")?;
+    }
+    open_sqlite_database(connection)
 }
 
 impl DiaryDataConnection for DiaryDataSqlite {
@@ -435,12 +443,13 @@ mod tests {
 
     #[test]
     fn current_database_version() {
-        create_new_sqlite(
-            Path::new("test.db"),
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_sqlite_database(
+            &conn,
             &[String::from("AA"), String::from("BBB"), String::from("CCA")],
         )
         .unwrap();
-        let datafile = open_sqlite_datafile(Path::new("test.db")).unwrap();
+        let datafile = open_sqlite_database(conn).unwrap();
 
         assert_eq!(
             CURRENT_DB_VERSION,
@@ -455,10 +464,9 @@ mod tests {
 
     #[test]
     fn database_update() {
-        {
-            let conn = Connection::open("test.db").unwrap();
-            conn.execute_batch(
-                "BEGIN;
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "BEGIN;
                 DROP TABLE IF EXISTS Info;
                 DROP TABLE IF EXISTS Category;
                 CREATE TABLE Category(
@@ -478,11 +486,9 @@ mod tests {
                     PRIMARY KEY(category_id, date)
                 );
                 COMMIT;",
-            )
-            .unwrap();
-            conn.close().unwrap();
-        }
-        let datafile = open_sqlite_datafile(Path::new("test.db")).unwrap();
+        )
+        .unwrap();
+        let datafile = open_sqlite_database(conn).unwrap();
 
         assert_eq!(
             CURRENT_DB_VERSION,
@@ -497,12 +503,13 @@ mod tests {
 
     #[test]
     fn test_sqlite() {
-        create_new_sqlite(
-            Path::new("test.db"),
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_sqlite_database(
+            &conn,
             &[String::from("AA"), String::from("BBB"), String::from("CCA")],
         )
         .unwrap();
-        let mut datafile = open_sqlite_datafile(Path::new("test.db")).unwrap();
+        let mut datafile = open_sqlite_database(conn).unwrap();
         datafile
             .update_data(
                 &chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(),
@@ -560,12 +567,13 @@ mod tests {
     fn add_category() {
         use crate::datafile::AddCategoryResult;
 
-        create_new_sqlite(
-            Path::new("test.db"),
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_sqlite_database(
+            &conn,
             &[String::from("AA"), String::from("BBB"), String::from("CCA")],
         )
         .unwrap();
-        let datafile = open_sqlite_datafile(Path::new("test.db")).unwrap();
+        let datafile = open_sqlite_database(conn).unwrap();
         let result = datafile.add_category("BBB").unwrap();
         assert_eq!(AddCategoryResult::AlreadyPresent, result);
         let result = datafile.add_category("DDD").unwrap();
@@ -579,12 +587,13 @@ mod tests {
     fn hide_category() {
         use crate::datafile::{AddCategoryResult, HideCategoryResult};
 
-        create_new_sqlite(
-            Path::new("test.db"),
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_sqlite_database(
+            &conn,
             &[String::from("AA"), String::from("BBB"), String::from("CCA")],
         )
         .unwrap();
-        let datafile = open_sqlite_datafile(Path::new("test.db")).unwrap();
+        let datafile = open_sqlite_database(conn).unwrap();
 
         let result = datafile.hide_category("DDD").unwrap();
         assert_eq!(HideCategoryResult::NonExistingCategory, result);
