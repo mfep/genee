@@ -99,7 +99,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
     ) -> Result<Vec<Vec<usize>>> {
         let mut statement = self
             .connection
-            .prepare("SELECT category_id FROM Category ORDER BY category_id")?;
+            .prepare("SELECT category_id FROM Category WHERE hidden=0 ORDER BY category_id")?;
         let rows = statement.query_map([], |row| row.get(0))?;
         let mut cat_ids = vec![];
         for cat_id in rows {

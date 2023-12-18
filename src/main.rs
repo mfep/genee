@@ -1,12 +1,7 @@
 use anyhow::{bail, Context, Result};
-use chrono::Duration;
-use chrono::Local;
-use chrono::NaiveDate;
+use chrono::{Duration, Local, NaiveDate};
 use dialoguer::MultiSelect;
-use genee::configuration;
-use genee::datafile;
-use genee::datafile::DiaryDataConnection;
-use genee::graphing;
+use genee::{configuration, datafile, graphing};
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
@@ -87,6 +82,12 @@ enum Command {
 
     /// Writes the contents of the datafile into a new datafile. Useful to convert between formats.
     Export { exported_path: PathBuf },
+
+    /// Adds or unhides a category. Only supported for SQLite datafiles
+    AddCategory { name: String },
+
+    /// Hides a category. Only supported for SQLite datafiles
+    HideCategory { name: String },
 }
 
 fn main() -> Result<()> {
@@ -136,6 +137,12 @@ fn main() -> Result<()> {
         Command::Export { ref exported_path } => {
             export_datafile(datafile_path, exported_path)?;
         }
+        Command::AddCategory { ref name } => {
+            add_category(datafile_path, name)?;
+        }
+        Command::HideCategory { ref name } => {
+            hide_category(datafile_path, name)?;
+        }
     }
 
     Ok(())
@@ -161,7 +168,7 @@ fn parse_from_date(input_date: &Option<String>) -> Result<Option<NaiveDate>> {
     }
 }
 
-fn get_graph_date(data: &dyn DiaryDataConnection) -> Result<NaiveDate> {
+fn get_graph_date(data: &dyn datafile::DiaryDataConnection) -> Result<NaiveDate> {
     let today = Local::now().naive_local().date();
     if data.get_row(&today)?.is_some() {
         Ok(today)
@@ -225,7 +232,10 @@ fn save_config(opt: &CliOptions) -> Result<()> {
     Ok(())
 }
 
-fn input_day_interactively(data: &mut dyn DiaryDataConnection, date: &NaiveDate) -> Result<()> {
+fn input_day_interactively(
+    data: &mut dyn datafile::DiaryDataConnection,
+    date: &NaiveDate,
+) -> Result<()> {
     let prompt = format!(
         "Enter habit data for date {}",
         date.format(datafile::DATE_FORMAT)
@@ -248,7 +258,7 @@ fn input_day_interactively(data: &mut dyn DiaryDataConnection, date: &NaiveDate)
 fn fill_datafile(
     from_date: &Option<NaiveDate>,
     to_date: &NaiveDate,
-    data: &mut dyn DiaryDataConnection,
+    data: &mut dyn datafile::DiaryDataConnection,
 ) -> Result<()> {
     let mut missing_dates = data.get_missing_dates(from_date, to_date)?;
     if data.is_empty()? {
@@ -266,7 +276,10 @@ fn fill_datafile(
     Ok(())
 }
 
-fn insert_to_datafile(date: &NaiveDate, data: &mut dyn DiaryDataConnection) -> Result<()> {
+fn insert_to_datafile(
+    date: &NaiveDate,
+    data: &mut dyn datafile::DiaryDataConnection,
+) -> Result<()> {
     input_day_interactively(data, date)?;
     Ok(())
 }
@@ -274,7 +287,7 @@ fn insert_to_datafile(date: &NaiveDate, data: &mut dyn DiaryDataConnection) -> R
 fn plot_datafile(
     opt: &CliOptions,
     last_date: &NaiveDate,
-    data: &dyn DiaryDataConnection,
+    data: &dyn datafile::DiaryDataConnection,
 ) -> Result<()> {
     if opt.list_previous_days.unwrap() > 0 {
         let start_day =
@@ -331,5 +344,40 @@ fn export_datafile(path: &Path, exported_path: &Path) -> Result<()> {
     let mut new_data = datafile::open_datafile(exported_path)?;
     new_data.update_data_batch(&rows)?;
 
+    Ok(())
+}
+
+fn add_category(datafile_path: &Path, name: &str) -> Result<()> {
+    let datafile = datafile::open_datafile(datafile_path)?;
+    match datafile.add_category(name)? {
+        datafile::AddCategoryResult::AddedNew => {
+            println!("Added new category \"{}\"", name);
+        }
+        datafile::AddCategoryResult::AlreadyPresent => {
+            bail!(
+                "Category \"{}\" was already present and shown in the datafile",
+                name
+            );
+        }
+        datafile::AddCategoryResult::Unhide => {
+            println!("Previously hidden category is showed again: \"{}\"", name)
+        }
+    }
+    Ok(())
+}
+
+fn hide_category(datafile_path: &Path, name: &str) -> Result<()> {
+    let datafile = datafile::open_datafile(datafile_path)?;
+    match datafile.hide_category(name)? {
+        datafile::HideCategoryResult::AlreadyHidden => {
+            bail!("Category \"{}\" was already hidden", name)
+        }
+        datafile::HideCategoryResult::NonExistingCategory => {
+            bail!("Category \"{}\" does not exist", name)
+        }
+        datafile::HideCategoryResult::Hidden => {
+            println!("Category \"{}\" is hidden", name);
+        }
+    }
     Ok(())
 }

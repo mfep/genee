@@ -60,17 +60,19 @@ OPTIONS:
             loaded from persistent configuration file
 
 SUBCOMMANDS:
-    export         Writes the contents of the datafile into a new datafile. Useful to convert between formats
-    fill           If set, habit information for all the missing days is queried between --from-date and yesterday.
-                   If --from-date is not set, all the missing days are queried between the first entry in the diary
-                   and yesterday. If there is no entry in the diary, only yesterday is queried
-    graph          Displays the habit data according to the specified options to the terminal
-    help           Prints this message or the help of the given subcommand(s)
-    insert         Queries for habit information on the specified date
-    list-config    Prints the persistent configuration
-    new            Provide a comma separated list of habit categories. A new diary file is created at the specified
-                   --datafile path
-    save-config    Saves the specified options to persistent configuration
+    add-category     Adds or unhides a category. Only supported for SQLite datafiles
+    export           Writes the contents of the datafile into a new datafile. Useful to convert between formats
+    fill             If set, habit information for all the missing days is queried between --from-date and
+                     yesterday. If --from-date is not set, all the missing days are queried between the first entry
+                     in the diary and yesterday. If there is no entry in the diary, only yesterday is queried
+    graph            Displays the habit data according to the specified options to the terminal
+    help             Prints this message or the help of the given subcommand(s)
+    hide-category    Hides a category. Only supported for SQLite datafiles
+    insert           Queries for habit information on the specified date
+    list-config      Prints the persistent configuration
+    new              Provide a comma separated list of habit categories. A new diary file is created at the
+                     specified --datafile path
+    save-config      Saves the specified options to persistent configuration
 ```
 
 ## Building
