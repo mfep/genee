@@ -1,5 +1,8 @@
 # genee
-[![Continuous integration](https://github.com/mfep/genee/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/mfep/genee/actions/workflows/continuous-integration.yml)
+
+[![Crates.io](https://img.shields.io/crates/v/genee.svg)](https://crates.io/crates/genee)
+[![Docs.rs](https://docs.rs/genee/badge.svg)](https://docs.rs/genee)
+[![CI](https://github.com/mfep/genee/workflows/CI/badge.svg)](https://github.com/mfep/genee/actions)
 
 genee is a simple habit tracker program for the command line
 
@@ -87,4 +90,4 @@ cargo build --release
 
 ## Contribution
 
-genee is a toy project for my own use and education. Feature request and bug reports are much appreciated though.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
