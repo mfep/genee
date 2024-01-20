@@ -23,4 +23,4 @@ directories-next = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
 dialoguer = "0.9"
-rusqlite = { version = "0.28.0", features = ["bundled", "backup"] }
+rusqlite = { version = "0.30.0", features = ["bundled", "backup"] }
