@@ -545,7 +545,7 @@ mod tests {
             ]
         );
         let data_counts = datafile
-            .calculate_data_counts_per_iter(&vec![(
+            .calculate_data_counts_per_iter(&[(
                 NaiveDate::from_ymd_opt(2023, 3, 3).unwrap(),
                 NaiveDate::from_ymd_opt(2023, 2, 3).unwrap(),
             )])
