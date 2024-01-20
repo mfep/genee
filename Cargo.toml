@@ -22,5 +22,5 @@ confy = "0.6"
 directories-next = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
-dialoguer = "0.9"
+dialoguer = "0.11"
 rusqlite = { version = "0.30.0", features = ["bundled", "backup"] }
