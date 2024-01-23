@@ -423,7 +423,7 @@ impl DiaryDataSqlite {
                 info_name TEXT UNIQUE NOT NULL,
                 info_value TEXT NOT NULL
             );
-            ALTER TABLE Category ADD COLUMN hidden INTEGER NOT NULL;
+            ALTER TABLE Category ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
             COMMIT;",
         )?;
         insert_version_to_db(&self.connection)?;
@@ -485,6 +485,9 @@ mod tests {
                     category_id INTEGER NOT NULL REFERENCES Category(category_id) ON DELETE CASCADE,
                     PRIMARY KEY(category_id, date)
                 );
+                INSERT INTO Category (name, created_at) VALUES (\"test_category\", 101);
+                INSERT INTO DateEntry (date, created_at) VALUES (123, 101);
+                INSERT INTO EntryToCategories (date, category_id) VALUES (123, 1);
                 COMMIT;",
         )
         .unwrap();
