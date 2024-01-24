@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.7.1] - 2024-01-23
+
 ### Fixed
 
 - Fixed SQLITE database upgrade routine from v0 to v1
