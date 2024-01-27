@@ -240,17 +240,18 @@ fn input_day_interactively(
         date.format(datafile::DATE_FORMAT)
     );
     let header = data.get_header()?;
-    let selected_items = MultiSelect::new()
+    let header_names: Vec<String> = header.iter().map(|(name, _id)| name.clone()).collect();
+    let selected_indices = MultiSelect::new()
         .with_prompt(prompt)
-        .items(&header)
+        .items(&header_names)
         .interact()?;
 
-    let mut append_bools = vec![false; header.len()];
-    for idx in selected_items {
-        append_bools[idx] = true;
-    }
+    let selected_ids: Vec<usize> = selected_indices
+        .into_iter()
+        .map(|idx| header.get(idx).unwrap().1)
+        .collect();
 
-    data.update_data(date, &append_bools)?;
+    data.update_data(date, &selected_ids)?;
     Ok(())
 }
 
@@ -338,7 +339,11 @@ fn export_datafile(path: &Path, exported_path: &Path) -> Result<()> {
     }
 
     // Create and update new datafile
-    let headers = data.get_header()?;
+    let headers: Vec<String> = data
+        .get_header()?
+        .into_iter()
+        .map(|(name, _id)| name)
+        .collect();
     datafile::create_new_datafile(exported_path, &headers)?;
     let mut new_data = datafile::open_datafile(exported_path)?;
     new_data.update_data_batch(&rows)?;

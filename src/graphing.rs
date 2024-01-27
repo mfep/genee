@@ -25,9 +25,14 @@ pub fn graph_last_n_days(
     if max_width < 10 {
         bail!("Graph height must be at least 10");
     }
+    let header_names: Vec<String> = data
+        .get_header()?
+        .iter()
+        .map(|(name, _id)| name.clone())
+        .collect();
     let date_ranges = datafile::get_date_ranges(last_date, period, iters);
     let count_vectors = data.calculate_data_counts_per_iter(&date_ranges)?;
-    let rows = generate_rows(&data.get_header()?, &count_vectors, max_width)?;
+    let rows = generate_rows(&header_names, &count_vectors, max_width)?;
     println!("{}{}", format_ranges(&date_ranges, max_width), rows);
     Ok(())
 }
@@ -40,12 +45,15 @@ pub fn pretty_print_diary_rows(
     end_date: &NaiveDate,
 ) -> Result<String> {
     let mut ret = String::new();
-    ret += &pretty_print_header(&data.get_header()?);
+    let header = data.get_header()?;
+    let header_names: Vec<String> = header.iter().map(|(name, _id)| name.clone()).collect();
+    let header_ids: Vec<usize> = header.iter().map(|(_name, id)| *id).collect();
+    ret += &pretty_print_header(&header_names);
     let mut current_date = *begin_date;
     while &current_date <= end_date {
         let current_row = data.get_row(&current_date)?;
         if let Some(row) = current_row {
-            ret += &pretty_print_row(&current_date, &row);
+            ret += &pretty_print_row(&current_date, &row, &header_ids);
         } else {
             _ = writeln!(
                 ret,
@@ -74,11 +82,15 @@ fn pretty_print_header(headers: &[String]) -> String {
     ret
 }
 
-fn pretty_print_row(date: &NaiveDate, data: &[bool]) -> String {
+fn pretty_print_row(date: &NaiveDate, present_ids: &[usize], all_ids: &[usize]) -> String {
     let mut ret = String::new();
     ret += &date.format(datafile::DATE_FORMAT).to_string();
-    for &val in data {
-        ret += if val { "  ✓ " } else { "    " };
+    for cat_id in all_ids {
+        ret += if present_ids.contains(cat_id) {
+            "  ✓ "
+        } else {
+            "    "
+        };
     }
     ret += "\n";
     ret

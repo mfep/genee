@@ -53,10 +53,10 @@ pub trait DiaryDataConnection {
     ) -> Result<Vec<Vec<usize>>>;
 
     /// Modifies the provided `DiaryDataConnection` instance with the provided data row and date.
-    fn update_data(&mut self, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate>;
+    fn update_data(&mut self, date: &NaiveDate, new_row: &[usize]) -> Result<SuccessfulUpdate>;
 
     /// Modifies the provided `DiaryDataConnection` instance with the provided row-date pairs.
-    fn update_data_batch(&mut self, new_items: &[(NaiveDate, Vec<bool>)]) -> Result<()>;
+    fn update_data_batch(&mut self, new_items: &[(NaiveDate, Vec<usize>)]) -> Result<()>;
 
     /// Returns a vector of missing dates between the first date in the database until specified date.
     fn get_missing_dates(
@@ -66,10 +66,11 @@ pub trait DiaryDataConnection {
     ) -> Result<Vec<NaiveDate>>;
 
     /// Get the list of habits tracked by the database.
-    fn get_header(&self) -> Result<Vec<String>>;
+    fn get_header(&self) -> Result<Vec<(String, usize)>>;
 
-    /// Get the habit data for a particular date, if exists, from the database.
-    fn get_row(&self, date: &NaiveDate) -> Result<Option<Vec<bool>>>;
+    /// Gets the category IDs of the habits associated with the specified date,
+    /// or None, if the date is not present in the database.
+    fn get_row(&self, date: &NaiveDate) -> Result<Option<Vec<usize>>>;
 
     /// Returns if the database contains any records.
     fn is_empty(&self) -> Result<bool>;
