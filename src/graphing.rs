@@ -66,6 +66,37 @@ pub fn pretty_print_diary_rows(
     Ok(ret)
 }
 
+pub fn pretty_print_most_frequent_day_types(
+    data: &dyn DiaryDataConnection,
+    num_days: usize,
+    end_date: &NaiveDate,
+    count: usize,
+) -> Result<String> {
+    let begin_date = *end_date - chrono::Duration::days(num_days as i64);
+    let header = data.get_header()?;
+    let most_frequent =
+        data.get_most_frequent_daily_data(&Some(begin_date), end_date, Some(count))?;
+    let mut ret = format!(
+        "The following day types were most frequent in the last {} days:\n",
+        num_days
+    );
+    for (ids, count) in most_frequent {
+        let category_names: Vec<&str> = header
+            .iter()
+            .filter_map(|(name, id)| {
+                if ids.contains(id) {
+                    Some(name.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        ret += &category_names.join(",");
+        ret += &format!(":{}\n", count);
+    }
+    Ok(ret)
+}
+
 fn pretty_print_header(headers: &[String]) -> String {
     let mut ret = String::new();
     ret += "          ";

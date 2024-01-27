@@ -82,10 +82,10 @@ enum Command {
     /// Writes the contents of the datafile into a new datafile. Useful to convert between formats.
     Export { exported_path: PathBuf },
 
-    /// Adds or unhides a category. Only supported for SQLite datafiles
+    /// Adds or unhides a category.
     AddCategory { name: String },
 
-    /// Hides a category. Only supported for SQLite datafiles
+    /// Hides a category.
     HideCategory { name: String },
 }
 
@@ -294,9 +294,18 @@ fn plot_datafile(
             *last_date - chrono::Duration::days(opt.list_previous_days.unwrap() as i64 - 1i64);
         print!(
             "{}",
-            graphing::pretty_print_diary_rows(data, &start_day, last_date)?
+            graphing::pretty_print_diary_rows(data, &start_day, last_date)?,
         );
     }
+    print!(
+        "{}",
+        graphing::pretty_print_most_frequent_day_types(
+            data,
+            opt.graph_days.unwrap() * opt.past_periods.unwrap(),
+            last_date,
+            5
+        )?
+    );
     graphing::graph_last_n_days(
         data,
         last_date,
