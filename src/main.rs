@@ -8,8 +8,7 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 #[structopt(about)]
 struct CliOptions {
-    /// Path to the diary file. If the file extension is csv, then the file is assumed to be a CSV text file.
-    /// Otherwise it is assumed to be an SQLite database.
+    /// Path to the diary file.
     /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(short, long, parse(from_os_str))]
     datafile: Option<PathBuf>,

@@ -76,7 +76,7 @@ pub fn get_config_path() -> PathBuf {
 pub fn get_default_datafile_path() -> PathBuf {
     let mut data_dir = get_project_dirs().data_dir().to_path_buf();
     data_dir.set_file_name("genee-data");
-    data_dir.set_extension("csv");
+    data_dir.set_extension("db");
     data_dir
 }
 

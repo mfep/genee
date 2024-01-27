@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed data entry when there are hidden categories
 
+### Removed
+
+- CSV datafile support
+
 ## [v0.7.1] - 2024-01-23
 
 ### Fixed

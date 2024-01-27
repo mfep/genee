@@ -1,12 +1,11 @@
 //! Handling of habit databases.
-mod csv_datafile;
 mod sqlite_datafile;
 use anyhow::Result;
 use chrono::{Duration, NaiveDate};
 use std::path::Path;
 
 /// Format of the dates used in the program.
-pub const DATE_FORMAT: &str = csv_datafile::DATE_FORMAT;
+pub const DATE_FORMAT: &str = "%Y-%m-%d";
 
 /// Result of an update to a `DiaryDataConnection` instance.
 pub enum SuccessfulUpdate {
@@ -95,11 +94,7 @@ pub trait DiaryDataConnection {
 
 /// Tries to read data file to memory.
 pub fn open_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
-    if path.extension().map_or(false, |p| p == "csv") {
-        Ok(csv_datafile::open_csv_datafile(path)?)
-    } else {
-        Ok(sqlite_datafile::open_sqlite_datafile(path)?)
-    }
+    sqlite_datafile::open_sqlite_datafile(path)
 }
 
 /// Calculates the date ranges according to the parameters.
@@ -126,11 +121,7 @@ pub fn get_date_ranges(
 
 /// Create a new database on the prescribed path, using the prescribed headers.
 pub fn create_new_datafile(path: &Path, headers: &[String]) -> Result<()> {
-    if path.extension().is_some_and(|ext| ext == "csv") {
-        csv_datafile::create_new_csv(path, headers)?;
-    } else {
-        sqlite_datafile::create_new_sqlite(path, headers)?;
-    }
+    sqlite_datafile::create_new_sqlite(path, headers)?;
     Ok(())
 }
 
