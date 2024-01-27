@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed data entry when there are hidden categories
+
 ## [v0.7.1] - 2024-01-23
 
 ### Fixed

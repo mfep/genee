@@ -105,17 +105,10 @@ impl DiaryDataConnection for DiaryDataSqlite {
         &self,
         date_ranges: &[(chrono::NaiveDate, chrono::NaiveDate)],
     ) -> Result<Vec<Vec<usize>>> {
-        let mut statement = self
-            .connection
-            .prepare("SELECT category_id FROM Category WHERE hidden=0 ORDER BY category_id")?;
-        let rows = statement.query_map([], |row| row.get(0))?;
-        let mut cat_ids = vec![];
-        for cat_id in rows {
-            cat_ids.push(cat_id?);
-        }
+        let category_ids = self.get_visible_category_ids()?;
         let mut result = vec![];
         for (from, to) in date_ranges {
-            result.push(self.calculate_data_counts(from, to, &cat_ids)?);
+            result.push(self.calculate_data_counts(from, to, &category_ids)?);
         }
         Ok(result)
     }
@@ -198,16 +191,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
     }
 
     fn get_row(&self, date: &chrono::NaiveDate) -> Result<Option<Vec<bool>>> {
-        let mut statement = self
-            .connection
-            .prepare("SELECT category_id FROM Category WHERE hidden=0 ORDER BY category_id")?;
-        let rows = statement.query_map([], |row| row.get(0))?;
-
-        // Ordered list of all category IDs in the database
-        let mut cat_ids: Vec<usize> = vec![];
-        for id in rows {
-            cat_ids.push(id?);
-        }
+        let category_ids = self.get_visible_category_ids()?;
 
         // Get if the date exists in the database
         let mut statement = self
@@ -231,7 +215,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
         }
 
         let mut res = vec![];
-        for cat_id in &cat_ids {
+        for cat_id in &category_ids {
             res.push(cat_ids_for_date.contains(cat_id));
         }
         Ok(Some(res))
@@ -342,16 +326,7 @@ impl DiaryDataSqlite {
         &mut self,
         new_items: &[(NaiveDate, Vec<bool>)],
     ) -> Result<super::SuccessfulUpdate> {
-        let mut statement = self
-            .connection
-            .prepare("SELECT category_id FROM Category ORDER BY category_id")?;
-        let rows = statement.query_map([], |row| row.get(0))?;
-
-        // Ordered list of all category IDs in the database
-        let mut cat_ids: Vec<usize> = vec![];
-        for id in rows {
-            cat_ids.push(id?);
-        }
+        let category_ids = self.get_visible_category_ids()?;
         let mut statement = self.connection.prepare("BEGIN")?;
         statement.execute([])?;
         let mut deleted_date_entries = 0;
@@ -359,7 +334,7 @@ impl DiaryDataSqlite {
         for (date, new_row) in new_items {
             // The IDs of the inserted categories for the date
             let mut updated_cat_ids = vec![];
-            for (&id, &marked) in cat_ids.iter().zip(new_row.iter()) {
+            for (&id, &marked) in category_ids.iter().zip(new_row.iter()) {
                 if marked {
                     updated_cat_ids.push(id);
                 }
@@ -434,6 +409,20 @@ impl DiaryDataSqlite {
     fn update_db(&self) -> Result<()> {
         self.update_db_to_v1()?;
         Ok(())
+    }
+
+    fn get_visible_category_ids(&self) -> Result<Vec<usize>> {
+        let mut statement = self
+            .connection
+            .prepare("SELECT category_id FROM Category WHERE hidden=0 ORDER BY category_id")?;
+        let rows = statement.query_map([], |row| row.get(0))?;
+
+        // Ordered list of all category IDs in the database
+        let mut category_ids: Vec<usize> = vec![];
+        for id in rows {
+            category_ids.push(id?);
+        }
+        Ok(category_ids)
     }
 }
 
