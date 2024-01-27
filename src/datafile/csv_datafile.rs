@@ -169,6 +169,15 @@ impl DiaryDataConnection for DiaryDataCsv {
     fn hide_category(&self, _name: &str) -> Result<super::HideCategoryResult> {
         todo!();
     }
+
+    fn get_most_frequent_daily_data(
+        &self,
+        _from: &Option<NaiveDate>,
+        _until: &NaiveDate,
+        _max_count: Option<usize>,
+    ) -> Result<Vec<(Vec<usize>, usize)>> {
+        todo!()
+    }
 }
 
 impl Drop for DiaryDataCsv {

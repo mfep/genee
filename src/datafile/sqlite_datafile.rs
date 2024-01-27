@@ -297,6 +297,47 @@ impl DiaryDataConnection for DiaryDataSqlite {
             Ok(super::HideCategoryResult::NonExistingCategory)
         }
     }
+
+    fn get_most_frequent_daily_data(
+        &self,
+        from: &Option<NaiveDate>,
+        until: &NaiveDate,
+        max_count: Option<usize>,
+    ) -> Result<Vec<(Vec<usize>, usize)>> {
+        let from_timestamp = from
+            .and_then(|from_date| {
+                Some(from_date.and_time(chrono::NaiveTime::default()).timestamp())
+            })
+            .unwrap_or_default();
+        let until_timestamp = until.and_time(chrono::NaiveTime::default()).timestamp();
+        let max_count = max_count.unwrap_or(usize::MAX);
+
+        let mut statement = self.connection.prepare(
+        "SELECT concat_categories, COUNT(date) FROM (
+            SELECT date, group_concat(category_id, ';') AS concat_categories FROM EntryToCategories WHERE date>=(?1) AND date<=(?2)
+                AND 0=(SELECT hidden FROM Category WHERE EntryToCategories.category_id=Category.category_id)
+            GROUP BY date
+        ) GROUP BY concat_categories ORDER BY COUNT(date) DESC LIMIT (?3)
+        ")?;
+        let rows =
+            statement.query_map(params![from_timestamp, until_timestamp, max_count], |row| {
+                Ok((
+                    row.get::<usize, String>(0).unwrap(),
+                    row.get::<usize, usize>(1).unwrap(),
+                ))
+            })?;
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                let (cat_ids, count) = row.unwrap();
+                let cat_ids = cat_ids
+                    .split(';')
+                    .map(|val| val.parse::<usize>().unwrap())
+                    .collect();
+                (cat_ids, count)
+            })
+            .collect())
+    }
 }
 
 impl DiaryDataSqlite {
@@ -607,5 +648,59 @@ mod tests {
 
         let header = datafile.get_header().unwrap();
         assert_eq!(vec!["AA", "BBB", "CCA"], header);
+    }
+
+    #[test]
+    fn get_most_frequent_daily_data() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_sqlite_database(
+            &conn,
+            &[String::from("AA"), String::from("BBB"), String::from("CCA")],
+        )
+        .unwrap();
+        let mut datafile = open_sqlite_database(conn).unwrap();
+        datafile
+            .update_data(
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(),
+                &[false, true, false],
+            )
+            .unwrap();
+        datafile
+            .update_data(
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 6).unwrap(),
+                &[true, false, true],
+            )
+            .unwrap();
+        datafile
+            .update_data(
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 7).unwrap(),
+                &[false, false, true],
+            )
+            .unwrap();
+        datafile
+            .update_data(
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 8).unwrap(),
+                &[false, false, true],
+            )
+            .unwrap();
+        datafile
+            .update_data(
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 9).unwrap(),
+                &[false, false, true],
+            )
+            .unwrap();
+
+        let most_frequent_days = datafile
+            .get_most_frequent_daily_data(
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 6),
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 8).unwrap(),
+                Some(3usize),
+            )
+            .unwrap();
+
+        assert_eq!(
+            most_frequent_days,
+            vec![(vec![3], 2usize), (vec![1, 3], 1usize)]
+        );
     }
 }

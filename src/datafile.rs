@@ -83,6 +83,14 @@ pub trait DiaryDataConnection {
 
     /// Hides the specified category in the database.
     fn hide_category(&self, name: &str) -> Result<HideCategoryResult>;
+
+    /// Returns the most frequent day "signatures" in the specified date interval (inclusive).
+    fn get_most_frequent_daily_data(
+        &self,
+        from: &Option<NaiveDate>,
+        until: &NaiveDate,
+        max_count: Option<usize>,
+    ) -> Result<Vec<(Vec<usize>, usize)>>;
 }
 
 /// Tries to read data file to memory.
