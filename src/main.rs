@@ -27,6 +27,10 @@ struct CliOptions {
     #[structopt(short, long)]
     list_previous_days: Option<usize>,
 
+    /// Specifies the number of most frequent daily habit compositions over the specified period.
+    #[structopt(short = "f", long)]
+    list_most_frequent_days: Option<usize>,
+
     /// Specifies the maximum allowed width of the terminal output.
     /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(long)]
@@ -200,6 +204,9 @@ fn merge_cli_and_persistent_options(
         list_previous_days: options_from_cli
             .list_previous_days
             .or(Some(persistent_config.list_previous_days)),
+        list_most_frequent_days: options_from_cli
+            .list_most_frequent_days
+            .or(Some(persistent_config.list_most_frequent_days)),
         ..options_from_cli
     }
 }
@@ -225,6 +232,9 @@ fn save_config(opt: &CliOptions) -> Result<()> {
         list_previous_days: opt
             .list_previous_days
             .unwrap_or(configuration::DEFAULT_LIST_PREVIOUS_DAYS),
+        list_most_frequent_days: opt
+            .list_most_frequent_days
+            .unwrap_or(configuration::DEFAULT_LIST_MOST_FREQUENT_DAYS),
     };
     configuration::save_config(&updated_config)?;
     println!("Successfully updated persistent configuration");
@@ -297,15 +307,17 @@ fn plot_datafile(
             graphing::pretty_print_diary_rows(data, &start_day, last_date)?,
         );
     }
-    print!(
-        "{}",
-        graphing::pretty_print_most_frequent_day_types(
-            data,
-            opt.graph_days.unwrap() * opt.past_periods.unwrap(),
-            last_date,
-            5
-        )?
-    );
+    if opt.list_most_frequent_days.unwrap() > 0 {
+        print!(
+            "{}",
+            graphing::pretty_print_most_frequent_day_types(
+                data,
+                opt.graph_days.unwrap() * opt.past_periods.unwrap(),
+                last_date,
+                opt.list_most_frequent_days.unwrap()
+            )?
+        );
+    }
     graphing::graph_last_n_days(
         data,
         last_date,
