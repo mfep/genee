@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `list_most_frequent_days` command line option. When greater than 0, the specified number of most frequently occurring daily habit compositions are printed to the terminal. This option can also be saved to and recalled from the persistent configuration.
+
 ### Fixed
 
 - Fixed data entry when there are hidden categories
