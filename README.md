@@ -8,7 +8,7 @@ genee is a simple habit tracker program for the command line
 
 ## Features
 - Daily tracking of habits 📅
-- Open storage format: SQLite database or simple CSV files 📄
+- Open storage format: SQLite database 📄
 - Pretty diagrams to compare successive periods of habit data 📊
 - Store default settings persistently 💾
 
@@ -46,12 +46,14 @@ FLAGS:
 
 OPTIONS:
     -d, --datafile <datafile>
-            Path to the diary file. If the file extension is csv, then the file is assumed to be a CSV text file.
-            Otherwise it is assumed to be an SQLite database. When not provided, its value is loaded from persistent
-            configuration file
+            Path to the diary file. When not provided, its value is loaded from persistent configuration file
+
     -g, --graph-days <graph-days>
             How many days each period should contain. When not provided, its value is loaded from persistent
             configuration file
+    -f, --list-most-frequent-days <list-most-frequent-days>
+            Specifies the number of most frequent daily habit compositions over the specified period
+
     -l, --list-previous-days <list-previous-days>
             Specifies the number of days from the diary that should be printed in a tabular format
 
@@ -63,14 +65,14 @@ OPTIONS:
             loaded from persistent configuration file
 
 SUBCOMMANDS:
-    add-category     Adds or unhides a category. Only supported for SQLite datafiles
+    add-category     Adds or unhides a category
     export           Writes the contents of the datafile into a new datafile. Useful to convert between formats
     fill             If set, habit information for all the missing days is queried between --from-date and
                      yesterday. If --from-date is not set, all the missing days are queried between the first entry
                      in the diary and yesterday. If there is no entry in the diary, only yesterday is queried
     graph            Displays the habit data according to the specified options to the terminal
     help             Prints this message or the help of the given subcommand(s)
-    hide-category    Hides a category. Only supported for SQLite datafiles
+    hide-category    Hides a category
     insert           Queries for habit information on the specified date
     list-config      Prints the persistent configuration
     new              Provide a comma separated list of habit categories. A new diary file is created at the

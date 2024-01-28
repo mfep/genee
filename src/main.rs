@@ -8,8 +8,7 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 #[structopt(about)]
 struct CliOptions {
-    /// Path to the diary file. If the file extension is csv, then the file is assumed to be a CSV text file.
-    /// Otherwise it is assumed to be an SQLite database.
+    /// Path to the diary file.
     /// When not provided, its value is loaded from persistent configuration file.
     #[structopt(short, long, parse(from_os_str))]
     datafile: Option<PathBuf>,
@@ -27,6 +26,10 @@ struct CliOptions {
     /// Specifies the number of days from the diary that should be printed in a tabular format.
     #[structopt(short, long)]
     list_previous_days: Option<usize>,
+
+    /// Specifies the number of most frequent daily habit compositions over the specified period.
+    #[structopt(short = "f", long)]
+    list_most_frequent_days: Option<usize>,
 
     /// Specifies the maximum allowed width of the terminal output.
     /// When not provided, its value is loaded from persistent configuration file.
@@ -83,10 +86,10 @@ enum Command {
     /// Writes the contents of the datafile into a new datafile. Useful to convert between formats.
     Export { exported_path: PathBuf },
 
-    /// Adds or unhides a category. Only supported for SQLite datafiles
+    /// Adds or unhides a category.
     AddCategory { name: String },
 
-    /// Hides a category. Only supported for SQLite datafiles
+    /// Hides a category.
     HideCategory { name: String },
 }
 
@@ -201,6 +204,9 @@ fn merge_cli_and_persistent_options(
         list_previous_days: options_from_cli
             .list_previous_days
             .or(Some(persistent_config.list_previous_days)),
+        list_most_frequent_days: options_from_cli
+            .list_most_frequent_days
+            .or(Some(persistent_config.list_most_frequent_days)),
         ..options_from_cli
     }
 }
@@ -226,6 +232,9 @@ fn save_config(opt: &CliOptions) -> Result<()> {
         list_previous_days: opt
             .list_previous_days
             .unwrap_or(configuration::DEFAULT_LIST_PREVIOUS_DAYS),
+        list_most_frequent_days: opt
+            .list_most_frequent_days
+            .unwrap_or(configuration::DEFAULT_LIST_MOST_FREQUENT_DAYS),
     };
     configuration::save_config(&updated_config)?;
     println!("Successfully updated persistent configuration");
@@ -241,17 +250,18 @@ fn input_day_interactively(
         date.format(datafile::DATE_FORMAT)
     );
     let header = data.get_header()?;
-    let selected_items = MultiSelect::new()
+    let header_names: Vec<String> = header.iter().map(|(name, _id)| name.clone()).collect();
+    let selected_indices = MultiSelect::new()
         .with_prompt(prompt)
-        .items(&header)
+        .items(&header_names)
         .interact()?;
 
-    let mut append_bools = vec![false; header.len()];
-    for idx in selected_items {
-        append_bools[idx] = true;
-    }
+    let selected_ids: Vec<usize> = selected_indices
+        .into_iter()
+        .map(|idx| header.get(idx).unwrap().1)
+        .collect();
 
-    data.update_data(date, &append_bools)?;
+    data.update_data(date, &selected_ids)?;
     Ok(())
 }
 
@@ -294,7 +304,18 @@ fn plot_datafile(
             *last_date - chrono::Duration::days(opt.list_previous_days.unwrap() as i64 - 1i64);
         print!(
             "{}",
-            graphing::pretty_print_diary_rows(data, &start_day, last_date)?
+            graphing::pretty_print_diary_rows(data, &start_day, last_date)?,
+        );
+    }
+    if opt.list_most_frequent_days.unwrap() > 0 {
+        print!(
+            "{}",
+            graphing::pretty_print_most_frequent_day_types(
+                data,
+                opt.graph_days.unwrap() * opt.past_periods.unwrap(),
+                last_date,
+                opt.list_most_frequent_days.unwrap()
+            )?
         );
     }
     graphing::graph_last_n_days(
@@ -339,7 +360,11 @@ fn export_datafile(path: &Path, exported_path: &Path) -> Result<()> {
     }
 
     // Create and update new datafile
-    let headers = data.get_header()?;
+    let headers: Vec<String> = data
+        .get_header()?
+        .into_iter()
+        .map(|(name, _id)| name)
+        .collect();
     datafile::create_new_datafile(exported_path, &headers)?;
     let mut new_data = datafile::open_datafile(exported_path)?;
     new_data.update_data_batch(&rows)?;

@@ -1,12 +1,11 @@
 //! Handling of habit databases.
-mod csv_datafile;
 mod sqlite_datafile;
 use anyhow::Result;
 use chrono::{Duration, NaiveDate};
 use std::path::Path;
 
 /// Format of the dates used in the program.
-pub const DATE_FORMAT: &str = csv_datafile::DATE_FORMAT;
+pub const DATE_FORMAT: &str = "%Y-%m-%d";
 
 /// Result of an update to a `DiaryDataConnection` instance.
 pub enum SuccessfulUpdate {
@@ -54,10 +53,10 @@ pub trait DiaryDataConnection {
     ) -> Result<Vec<Vec<usize>>>;
 
     /// Modifies the provided `DiaryDataConnection` instance with the provided data row and date.
-    fn update_data(&mut self, date: &NaiveDate, new_row: &[bool]) -> Result<SuccessfulUpdate>;
+    fn update_data(&mut self, date: &NaiveDate, new_row: &[usize]) -> Result<SuccessfulUpdate>;
 
     /// Modifies the provided `DiaryDataConnection` instance with the provided row-date pairs.
-    fn update_data_batch(&mut self, new_items: &[(NaiveDate, Vec<bool>)]) -> Result<()>;
+    fn update_data_batch(&mut self, new_items: &[(NaiveDate, Vec<usize>)]) -> Result<()>;
 
     /// Returns a vector of missing dates between the first date in the database until specified date.
     fn get_missing_dates(
@@ -67,10 +66,11 @@ pub trait DiaryDataConnection {
     ) -> Result<Vec<NaiveDate>>;
 
     /// Get the list of habits tracked by the database.
-    fn get_header(&self) -> Result<Vec<String>>;
+    fn get_header(&self) -> Result<Vec<(String, usize)>>;
 
-    /// Get the habit data for a particular date, if exists, from the database.
-    fn get_row(&self, date: &NaiveDate) -> Result<Option<Vec<bool>>>;
+    /// Gets the category IDs of the habits associated with the specified date,
+    /// or None, if the date is not present in the database.
+    fn get_row(&self, date: &NaiveDate) -> Result<Option<Vec<usize>>>;
 
     /// Returns if the database contains any records.
     fn is_empty(&self) -> Result<bool>;
@@ -83,15 +83,19 @@ pub trait DiaryDataConnection {
 
     /// Hides the specified category in the database.
     fn hide_category(&self, name: &str) -> Result<HideCategoryResult>;
+
+    /// Returns the most frequent day "signatures" in the specified date interval (inclusive).
+    fn get_most_frequent_daily_data(
+        &self,
+        from: &Option<NaiveDate>,
+        until: &NaiveDate,
+        max_count: Option<usize>,
+    ) -> Result<Vec<(Vec<usize>, usize)>>;
 }
 
 /// Tries to read data file to memory.
 pub fn open_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>> {
-    if path.extension().map_or(false, |p| p == "csv") {
-        Ok(csv_datafile::open_csv_datafile(path)?)
-    } else {
-        Ok(sqlite_datafile::open_sqlite_datafile(path)?)
-    }
+    sqlite_datafile::open_sqlite_datafile(path)
 }
 
 /// Calculates the date ranges according to the parameters.
@@ -118,11 +122,7 @@ pub fn get_date_ranges(
 
 /// Create a new database on the prescribed path, using the prescribed headers.
 pub fn create_new_datafile(path: &Path, headers: &[String]) -> Result<()> {
-    if path.extension().is_some_and(|ext| ext == "csv") {
-        csv_datafile::create_new_csv(path, headers)?;
-    } else {
-        sqlite_datafile::create_new_sqlite(path, headers)?;
-    }
+    sqlite_datafile::create_new_sqlite(path, headers)?;
     Ok(())
 }
 

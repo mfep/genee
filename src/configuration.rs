@@ -8,6 +8,7 @@ pub const DEFAULT_GRAPH_DAYS: usize = 30;
 pub const DEFAULT_PAST_PERIODS: usize = 2;
 pub const DEFAULT_MAX_DISPLAYED_COLS: usize = 70;
 pub const DEFAULT_LIST_PREVIOUS_DAYS: usize = 0;
+pub const DEFAULT_LIST_MOST_FREQUENT_DAYS: usize = 5;
 const QUALIFIER_ID: &str = "org";
 const ORG_ID: &str = "mfep";
 const APP_ID: &str = "genee";
@@ -29,6 +30,9 @@ pub struct Config {
 
     /// Specifies the number of days from the diary that should be printed in a tabular format.
     pub list_previous_days: usize,
+
+    /// Specifies the number of most frequent daily habit compositions to print
+    pub list_most_frequent_days: usize,
 }
 
 impl std::default::Default for Config {
@@ -39,6 +43,7 @@ impl std::default::Default for Config {
             past_periods: DEFAULT_PAST_PERIODS,
             max_displayed_cols: DEFAULT_MAX_DISPLAYED_COLS,
             list_previous_days: DEFAULT_LIST_PREVIOUS_DAYS,
+            list_most_frequent_days: DEFAULT_LIST_MOST_FREQUENT_DAYS,
         }
     }
 }
@@ -76,7 +81,7 @@ pub fn get_config_path() -> PathBuf {
 pub fn get_default_datafile_path() -> PathBuf {
     let mut data_dir = get_project_dirs().data_dir().to_path_buf();
     data_dir.set_file_name("genee-data");
-    data_dir.set_extension("csv");
+    data_dir.set_extension("db");
     data_dir
 }
 

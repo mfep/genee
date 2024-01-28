@@ -96,6 +96,10 @@ pub fn open_sqlite_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>>
     open_sqlite_database(connection)
 }
 
+fn date_to_timestamp(date: &NaiveDate) -> i64 {
+    date.and_time(chrono::NaiveTime::default()).timestamp()
+}
+
 impl DiaryDataConnection for DiaryDataSqlite {
     fn into_any(self: Box<Self>) -> Box<dyn std::any::Any> {
         self
@@ -116,12 +120,12 @@ impl DiaryDataConnection for DiaryDataSqlite {
     fn update_data(
         &mut self,
         date: &chrono::NaiveDate,
-        new_row: &[bool],
+        new_row: &[usize],
     ) -> Result<super::SuccessfulUpdate> {
         self.update_data_internal(&[(*date, new_row.to_vec())])
     }
 
-    fn update_data_batch(&mut self, new_items: &[(NaiveDate, Vec<bool>)]) -> Result<()> {
+    fn update_data_batch(&mut self, new_items: &[(NaiveDate, Vec<usize>)]) -> Result<()> {
         self.update_data_internal(new_items)?;
         Ok(())
     }
@@ -177,48 +181,44 @@ impl DiaryDataConnection for DiaryDataSqlite {
         Ok(missing_dates)
     }
 
-    fn get_header(&self) -> Result<Vec<String>> {
-        let mut statement = self
-            .connection
-            .prepare("SELECT name FROM Category WHERE hidden=0 ORDER BY category_id")?;
-        let rows = statement.query_map([], |row| row.get(0))?;
-        let mut ret = vec![];
-
-        for name in rows {
-            ret.push(name?);
+    fn get_header(&self) -> Result<Vec<(String, usize)>> {
+        let mut statement = self.connection.prepare(
+            "SELECT name, category_id FROM Category WHERE hidden=0 ORDER BY category_id",
+        )?;
+        let rows = statement.query_map([], |row| {
+            Ok((row.get::<usize, String>(0)?, row.get::<usize, usize>(1)?))
+        })?;
+        let mut header = vec![];
+        for row in rows {
+            header.push(row?);
         }
-        Ok(ret)
+        Ok(header)
     }
 
-    fn get_row(&self, date: &chrono::NaiveDate) -> Result<Option<Vec<bool>>> {
-        let category_ids = self.get_visible_category_ids()?;
-
+    fn get_row(&self, date: &chrono::NaiveDate) -> Result<Option<Vec<usize>>> {
         // Get if the date exists in the database
         let mut statement = self
             .connection
             .prepare("SELECT COUNT(*) FROM DateEntry WHERE date=?1")?;
-        let date_timestamp = date.and_time(chrono::NaiveTime::default()).timestamp();
+        let date_timestamp = date_to_timestamp(date);
         let date_count: usize = statement.query_row([date_timestamp], |row| row.get(0))?;
-        let day_exists = date_count > 0;
-        if !day_exists {
+        if date_count == 0 {
             return Ok(None);
         }
 
         // Get categories for the specified date
         let mut statement = self.connection.prepare(
-            "SELECT category_id FROM EntryToCategories WHERE date=(?1) ORDER BY category_id",
+            "SELECT category_id FROM EntryToCategories WHERE date=(?1)
+                AND 0=(SELECT hidden FROM Category WHERE EntryToCategories.category_id=Category.category_id)
+            ORDER BY category_id",
         )?;
-        let rows = statement.query_map([date_timestamp], |row| row.get(0))?;
-        let mut cat_ids_for_date: Vec<usize> = vec![];
-        for id in rows {
-            cat_ids_for_date.push(id?);
+        let rows =
+            statement.query_map(params![date_timestamp], |row| row.get::<usize, usize>(0))?;
+        let mut row = vec![];
+        for r in rows {
+            row.push(r?);
         }
-
-        let mut res = vec![];
-        for cat_id in &category_ids {
-            res.push(cat_ids_for_date.contains(cat_id));
-        }
-        Ok(Some(res))
+        Ok(Some(row))
     }
 
     fn is_empty(&self) -> Result<bool> {
@@ -297,6 +297,47 @@ impl DiaryDataConnection for DiaryDataSqlite {
             Ok(super::HideCategoryResult::NonExistingCategory)
         }
     }
+
+    fn get_most_frequent_daily_data(
+        &self,
+        from: &Option<NaiveDate>,
+        until: &NaiveDate,
+        max_count: Option<usize>,
+    ) -> Result<Vec<(Vec<usize>, usize)>> {
+        let from_timestamp = from
+            .and_then(|from_date| {
+                Some(from_date.and_time(chrono::NaiveTime::default()).timestamp())
+            })
+            .unwrap_or_default();
+        let until_timestamp = until.and_time(chrono::NaiveTime::default()).timestamp();
+        let max_count = max_count.unwrap_or(usize::MAX);
+
+        let mut statement = self.connection.prepare(
+        "SELECT concat_categories, COUNT(date) FROM (
+            SELECT date, group_concat(category_id, ';') AS concat_categories FROM EntryToCategories WHERE date>=(?1) AND date<=(?2)
+                AND 0=(SELECT hidden FROM Category WHERE EntryToCategories.category_id=Category.category_id)
+            GROUP BY date
+        ) GROUP BY concat_categories ORDER BY COUNT(date) DESC LIMIT (?3)
+        ")?;
+        let rows =
+            statement.query_map(params![from_timestamp, until_timestamp, max_count], |row| {
+                Ok((
+                    row.get::<usize, String>(0).unwrap(),
+                    row.get::<usize, usize>(1).unwrap(),
+                ))
+            })?;
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                let (cat_ids, count) = row.unwrap();
+                let cat_ids = cat_ids
+                    .split(';')
+                    .map(|val| val.parse::<usize>().unwrap())
+                    .collect();
+                (cat_ids, count)
+            })
+            .collect())
+    }
 }
 
 impl DiaryDataSqlite {
@@ -324,22 +365,13 @@ impl DiaryDataSqlite {
 
     fn update_data_internal(
         &mut self,
-        new_items: &[(NaiveDate, Vec<bool>)],
+        new_items: &[(NaiveDate, Vec<usize>)],
     ) -> Result<super::SuccessfulUpdate> {
-        let category_ids = self.get_visible_category_ids()?;
         let mut statement = self.connection.prepare("BEGIN")?;
         statement.execute([])?;
         let mut deleted_date_entries = 0;
 
-        for (date, new_row) in new_items {
-            // The IDs of the inserted categories for the date
-            let mut updated_cat_ids = vec![];
-            for (&id, &marked) in category_ids.iter().zip(new_row.iter()) {
-                if marked {
-                    updated_cat_ids.push(id);
-                }
-            }
-
+        for (date, new_category_ids) in new_items {
             // Remove entry in DateEntry if exists
             let mut statement = self
                 .connection
@@ -358,7 +390,7 @@ impl DiaryDataSqlite {
             let mut statement = self
                 .connection
                 .prepare("INSERT INTO EntryToCategories (date, category_id) VALUES (?1, ?2)")?;
-            for id in updated_cat_ids {
+            for id in new_category_ids {
                 statement.execute(params![date_timestamp, id])?;
             }
         }
@@ -503,22 +535,13 @@ mod tests {
         .unwrap();
         let mut datafile = open_sqlite_database(conn).unwrap();
         datafile
-            .update_data(
-                &chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(),
-                &[false, true, false],
-            )
+            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(), &[2])
             .unwrap();
         datafile
-            .update_data(
-                &chrono::NaiveDate::from_ymd_opt(2023, 3, 3).unwrap(),
-                &[false, true, false],
-            )
+            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 3, 3).unwrap(), &[2])
             .unwrap();
         datafile
-            .update_data(
-                &chrono::NaiveDate::from_ymd_opt(2023, 2, 7).unwrap(),
-                &[false, false, true],
-            )
+            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 7).unwrap(), &[3])
             .unwrap();
         let missing_dates = datafile
             .get_missing_dates(
@@ -553,6 +576,10 @@ mod tests {
             max_date,
             chrono::NaiveDate::from_ymd_opt(2023, 3, 3).unwrap()
         );
+        let data_at = datafile
+            .get_row(&chrono::NaiveDate::from_ymd_opt(2023, 2, 7).unwrap())
+            .unwrap();
+        assert_eq!(Some(vec![3]), data_at);
     }
 
     #[test]
@@ -572,7 +599,15 @@ mod tests {
         assert_eq!(AddCategoryResult::AddedNew, result);
 
         let header = datafile.get_header().unwrap();
-        assert_eq!(vec!["AA", "BBB", "CCA", "DDD"], header);
+        assert_eq!(
+            vec![
+                (String::from("AA"), 1usize),
+                (String::from("BBB"), 2usize),
+                (String::from("CCA"), 3usize),
+                (String::from("DDD"), 4usize)
+            ],
+            header
+        );
     }
 
     #[test]
@@ -594,18 +629,73 @@ mod tests {
         assert_eq!(HideCategoryResult::Hidden, result);
 
         let header = datafile.get_header().unwrap();
-        assert_eq!(vec!["BBB", "CCA"], header);
+        assert_eq!(
+            vec![(String::from("BBB"), 2), (String::from("CCA"), 3)],
+            header
+        );
 
         let result = datafile.hide_category("AA").unwrap();
         assert_eq!(HideCategoryResult::AlreadyHidden, result);
 
         let header = datafile.get_header().unwrap();
-        assert_eq!(vec!["BBB", "CCA"], header);
+        assert_eq!(
+            vec![(String::from("BBB"), 2), (String::from("CCA"), 3)],
+            header
+        );
 
         let result = datafile.add_category("AA").unwrap();
         assert_eq!(AddCategoryResult::Unhide, result);
 
         let header = datafile.get_header().unwrap();
-        assert_eq!(vec!["AA", "BBB", "CCA"], header);
+        assert_eq!(
+            vec![
+                (String::from("AA"), 1),
+                (String::from("BBB"), 2),
+                (String::from("CCA"), 3)
+            ],
+            header
+        );
+    }
+
+    #[test]
+    fn get_most_frequent_daily_data() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_sqlite_database(
+            &conn,
+            &[String::from("AA"), String::from("BBB"), String::from("CCA")],
+        )
+        .unwrap();
+        let mut datafile = open_sqlite_database(conn).unwrap();
+        datafile
+            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(), &[2])
+            .unwrap();
+        datafile
+            .update_data(
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 6).unwrap(),
+                &[1, 3],
+            )
+            .unwrap();
+        datafile
+            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 7).unwrap(), &[3])
+            .unwrap();
+        datafile
+            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 8).unwrap(), &[3])
+            .unwrap();
+        datafile
+            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 9).unwrap(), &[3])
+            .unwrap();
+
+        let most_frequent_days = datafile
+            .get_most_frequent_daily_data(
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 6),
+                &chrono::NaiveDate::from_ymd_opt(2023, 2, 8).unwrap(),
+                Some(3usize),
+            )
+            .unwrap();
+
+        assert_eq!(
+            most_frequent_days,
+            vec![(vec![3], 2usize), (vec![1, 3], 1usize)]
+        );
     }
 }

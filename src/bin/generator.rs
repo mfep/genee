@@ -40,13 +40,15 @@ fn generate_header(cols: usize) -> Vec<String> {
     header
 }
 
-fn generate_data(cols: usize, rows: usize) -> Vec<(NaiveDate, Vec<bool>)> {
+fn generate_data(cols: usize, rows: usize) -> Vec<(NaiveDate, Vec<usize>)> {
     let mut rng = rand::thread_rng();
     let mut data = vec![];
     for row in 0..rows {
         let mut row_data = vec![];
-        for _col in 0..cols {
-            row_data.push(rng.gen_bool(0.5));
+        for col in 1..cols + 1 {
+            if rng.gen_bool(0.5) {
+                row_data.push(col)
+            }
         }
         let date = Local::now().naive_local() + Duration::days(1 + row as i64 - rows as i64);
         data.push((date.date(), row_data));
