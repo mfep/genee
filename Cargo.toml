@@ -15,14 +15,16 @@ keywords = ["habit-tracking"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = "0.4"
 anyhow = "1.0"
-structopt = "0.3.21"
-yansi = "0.5.0"
-rand = "0.8.3"
+chrono = "0.4"
 confy = "0.6"
-directories-next = "2.0"
-serde = { version = "1.0", features = ["derive"] }
-toml = "0.8"
+crossterm = "0.27.0"
 dialoguer = "0.11"
+directories-next = "2.0"
+rand = "0.8.3"
+ratatui = "0.25.0"
 rusqlite = { version = "0.30.0", features = ["bundled", "backup"] }
+serde = { version = "1.0", features = ["derive"] }
+structopt = "0.3.21"
+toml = "0.8"
+yansi = "0.5.0"

@@ -5,6 +5,8 @@ use genee::{configuration, datafile, graphing};
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
+mod ui;
+
 #[derive(StructOpt)]
 #[structopt(about)]
 struct CliOptions {
@@ -37,7 +39,7 @@ struct CliOptions {
     max_displayed_cols: Option<usize>,
 
     #[structopt(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(StructOpt)]
@@ -97,10 +99,10 @@ fn main() -> Result<()> {
     let opt = handle_config()?;
     let datafile_path = opt.datafile.as_ref().unwrap();
     match opt.command {
-        Command::Fill {
+        Some(Command::Fill {
             ref from_date,
             no_graph,
-        } => {
+        }) => {
             let from_date = parse_from_date(from_date)?;
             let mut data = datafile::open_datafile(datafile_path)?;
             let to_date = get_graph_date(&*data)?;
@@ -109,13 +111,13 @@ fn main() -> Result<()> {
                 plot_datafile(&opt, &to_date, &*data)?;
             }
         }
-        Command::Graph { ref from_date } => {
+        Some(Command::Graph { ref from_date }) => {
             let data = datafile::open_datafile(datafile_path)?;
             let from_date = parse_from_date(from_date)?;
             let from_date = from_date.unwrap_or_else(|| Local::now().naive_local().date());
             plot_datafile(&opt, &from_date, &*data)?;
         }
-        Command::Insert { ref date, no_graph } => {
+        Some(Command::Insert { ref date, no_graph }) => {
             let date = parse_from_date(&Some(date.clone()))?.unwrap();
             let mut data = datafile::open_datafile(datafile_path)?;
             insert_to_datafile(&date, &mut *data)?;
@@ -123,7 +125,7 @@ fn main() -> Result<()> {
                 plot_datafile(&opt, &date, &*data)?;
             }
         }
-        Command::ListConfig => {
+        Some(Command::ListConfig) => {
             let persistent_config = configuration::load_config()?;
             println!(
                 "Listing persistent configuration loaded from '{}'\n{}",
@@ -131,20 +133,23 @@ fn main() -> Result<()> {
                 &persistent_config
             );
         }
-        Command::New { ref category_list } => {
+        Some(Command::New { ref category_list }) => {
             create_new(datafile_path, category_list)?;
         }
-        Command::SaveConfig => {
+        Some(Command::SaveConfig) => {
             save_config(&opt)?;
         }
-        Command::Export { ref exported_path } => {
+        Some(Command::Export { ref exported_path }) => {
             export_datafile(datafile_path, exported_path)?;
         }
-        Command::AddCategory { ref name } => {
+        Some(Command::AddCategory { ref name }) => {
             add_category(datafile_path, name)?;
         }
-        Command::HideCategory { ref name } => {
+        Some(Command::HideCategory { ref name }) => {
             hide_category(datafile_path, name)?;
+        }
+        None => {
+            ui::run_app(&opt)?;
         }
     }
 
