@@ -156,7 +156,7 @@ fn handle_events(app: &mut UiApp) -> Result<bool> {
                 AppState::Editing(edit_state) => {
                     if key.kind == KeyEventKind::Press && key.code == KeyCode::Enter {
                         if edit_state.habit_vec != edit_state.initial_habit_vec {
-                            let row_idx = (edit_state.date - app.start_date).num_days();
+                            let row_idx = (app.start_date - edit_state.date).num_days();
                             app.habit_rows[row_idx as usize].1 = Some(edit_state.habit_vec.clone());
                             app.datafile.update_data(
                                 &edit_state.date,
