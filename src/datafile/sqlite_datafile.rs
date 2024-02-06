@@ -196,29 +196,50 @@ impl DiaryDataConnection for DiaryDataSqlite {
     }
 
     fn get_row(&self, date: &chrono::NaiveDate) -> Result<Option<Vec<usize>>> {
-        // Get if the date exists in the database
-        let mut statement = self
-            .connection
-            .prepare("SELECT COUNT(*) FROM DateEntry WHERE date=?1")?;
-        let date_timestamp = date_to_timestamp(date);
-        let date_count: usize = statement.query_row([date_timestamp], |row| row.get(0))?;
-        if date_count == 0 {
-            return Ok(None);
-        }
+        Ok(self.get_rows(date, date)?.pop().unwrap())
+    }
 
-        // Get categories for the specified date
+    fn get_rows(&self, from: &NaiveDate, until: &NaiveDate) -> Result<Vec<Option<Vec<usize>>>> {
         let mut statement = self.connection.prepare(
-            "SELECT category_id FROM EntryToCategories WHERE date=(?1)
-                AND 0=(SELECT hidden FROM Category WHERE EntryToCategories.category_id=Category.category_id)
-            ORDER BY category_id",
-        )?;
-        let rows =
-            statement.query_map(params![date_timestamp], |row| row.get::<usize, usize>(0))?;
-        let mut row = vec![];
-        for r in rows {
-            row.push(r?);
+            "SELECT date, group_concat(coalesce(category_id, 'EMPTY'), ';') FROM DateEntry
+                LEFT JOIN EntryToCategories USING(date)
+                WHERE date>=?1 AND date<=?2
+                    AND (category_id ISNULL
+                        OR 0=(SELECT hidden FROM Category WHERE EntryToCategories.category_id=Category.category_id))
+                GROUP BY date
+                ORDER BY date DESC")?;
+
+        let mut rows =
+            statement.query(params![date_to_timestamp(from), date_to_timestamp(until)])?;
+        let mut results = vec![];
+        let mut current_date = *until;
+        while current_date >= *from {
+            if let Some(row) = rows.next()? {
+                let timestamp_s: i64 = row.get(0)?;
+                let date = NaiveDateTime::from_timestamp_opt(timestamp_s, 0)
+                    .unwrap()
+                    .date();
+
+                while date < current_date {
+                    results.push(None);
+                    current_date -= chrono::Duration::days(1);
+                }
+                let row_data: String = row.get(1)?;
+                if row_data == "EMPTY" {
+                    results.push(Some(vec![]));
+                } else {
+                    let row_data_parsed = row_data
+                        .split(';')
+                        .map(|id| id.parse::<usize>().unwrap())
+                        .collect();
+                    results.push(Some(row_data_parsed));
+                }
+            } else {
+                results.push(None);
+            }
+            current_date -= chrono::Duration::days(1);
         }
-        Ok(Some(row))
+        Ok(results)
     }
 
     fn is_empty(&self) -> Result<bool> {
@@ -696,6 +717,42 @@ mod tests {
         assert_eq!(
             most_frequent_days,
             vec![(vec![3], 2usize), (vec![1, 3], 1usize)]
+        );
+    }
+
+    #[test]
+    fn test_get_rows() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_sqlite_database(&conn, &[String::from("AA"), String::from("BBB")]).unwrap();
+        let mut datafile = open_sqlite_database(conn).unwrap();
+        datafile
+            .update_data_batch(&[
+                (NaiveDate::from_ymd_opt(2024, 2, 1).unwrap(), vec![1]),
+                (NaiveDate::from_ymd_opt(2024, 2, 2).unwrap(), vec![2]),
+                (NaiveDate::from_ymd_opt(2024, 2, 4).unwrap(), vec![1, 2]),
+                (NaiveDate::from_ymd_opt(2024, 2, 5).unwrap(), vec![]),
+            ])
+            .unwrap();
+
+        let rows = datafile
+            .get_rows(
+                &NaiveDate::from_ymd_opt(2024, 1, 30).unwrap(),
+                &NaiveDate::from_ymd_opt(2024, 2, 6).unwrap(),
+            )
+            .unwrap();
+
+        assert_eq!(
+            rows,
+            vec![
+                None,
+                Some(vec![]),
+                Some(vec![1, 2]),
+                None,
+                Some(vec![2]),
+                Some(vec![1]),
+                None,
+                None,
+            ]
         );
     }
 }

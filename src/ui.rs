@@ -75,12 +75,14 @@ impl UiApp {
     }
 
     fn load_habit_row_batch(&mut self, batch_start_date: &NaiveDate) -> Result<()> {
+        let from = *batch_start_date - chrono::Duration::days(DEFAULT_STARTING_HABIT_ROWS as i64);
+        let new_rows = self.datafile.get_rows(&from, batch_start_date)?;
+
         let mut date = *batch_start_date;
-        for _i in 0..DEFAULT_STARTING_HABIT_ROWS {
-            let habit_data = self.datafile.get_row(&date)?;
+        for row in new_rows {
             self.habit_rows.push((
                 date,
-                habit_data.map(|cat_ids| decode_habit_vector(&self.header, &cat_ids)),
+                row.map(|cat_ids| decode_habit_vector(&self.header, &cat_ids)),
             ));
             date -= chrono::Duration::days(1);
         }
