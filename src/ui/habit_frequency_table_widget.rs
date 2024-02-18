@@ -18,8 +18,14 @@ fn get_color(idx: usize) -> Color {
 
 pub struct HabitFrequencyTableWidget {
     header: Vec<(String, usize)>,
+    range_size: usize,
+    iters: usize,
     date_ranges: Vec<(NaiveDate, NaiveDate)>,
     data_counts: Vec<Vec<usize>>,
+}
+
+pub enum HabitFrequencyTableWidgetInput {
+    SetBeginDate(NaiveDate),
 }
 
 impl HabitFrequencyTableWidget {
@@ -33,6 +39,8 @@ impl HabitFrequencyTableWidget {
         let data_counts = datafile.calculate_data_counts_per_iter(&date_ranges)?;
         Ok(HabitFrequencyTableWidget {
             header,
+            range_size,
+            iters,
             date_ranges,
             data_counts,
         })
@@ -53,7 +61,7 @@ impl HabitFrequencyTableWidget {
             .enumerate()
             .map(|(idx, (from, to))| {
                 Span::styled(
-                    format!("{}-{} ", from, to),
+                    format!("{} - {} ", to, from),
                     Style::default().fg(get_color(idx)),
                 )
             })
@@ -86,5 +94,19 @@ impl HabitFrequencyTableWidget {
             bar_chart = bar_chart.data(bar_group);
         }
         frame.render_widget(bar_chart, inner_chunks[1]);
+    }
+
+    pub fn update(
+        &mut self,
+        datafile: &dyn DiaryDataConnection,
+        input: HabitFrequencyTableWidgetInput,
+    ) -> Result<()> {
+        match input {
+            HabitFrequencyTableWidgetInput::SetBeginDate(date) => {
+                self.date_ranges = datafile::get_date_ranges(&date, self.range_size, self.iters);
+                self.data_counts = datafile.calculate_data_counts_per_iter(&self.date_ranges)?;
+            }
+        }
+        Ok(())
     }
 }

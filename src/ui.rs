@@ -5,6 +5,7 @@ use std::io::stdout;
 
 use crate::CliOptions;
 use anyhow::Result;
+use chrono::Local;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     ExecutableCommand,
@@ -13,8 +14,8 @@ use genee::datafile::{self, DiaryDataConnection};
 use ratatui::prelude::*;
 
 use self::{
-    habit_day_list_widget::{HabitDayListWidget, HabitDayListWidgetContext},
-    habit_frequency_table_widget::HabitFrequencyTableWidget,
+    habit_day_list_widget::{HabitDayListWidget, HabitDayListWidgetInput},
+    habit_frequency_table_widget::{HabitFrequencyTableWidget, HabitFrequencyTableWidgetInput},
 };
 
 pub fn run_app(opts: &CliOptions) -> Result<()> {
@@ -45,9 +46,8 @@ struct UiApp {
 
 impl UiApp {
     fn new(opts: &CliOptions) -> Result<Self> {
-        let mut datafile = datafile::open_datafile(opts.datafile.as_ref().unwrap())?;
-        let habit_day_list_widget =
-            HabitDayListWidget::new(HabitDayListWidgetContext::new(&mut *datafile))?;
+        let datafile = datafile::open_datafile(opts.datafile.as_ref().unwrap())?;
+        let habit_day_list_widget = HabitDayListWidget::new(&*datafile)?;
         let habit_frequency_table_widget = HabitFrequencyTableWidget::new(
             &*datafile,
             opts.graph_days.unwrap(),
@@ -66,10 +66,58 @@ impl UiApp {
             if let Event::Key(key) = event {
                 if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
                     return Ok(true);
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Up {
+                    self.habit_day_list_widget.update(
+                        &mut *self.datafile,
+                        HabitDayListWidgetInput::NavigateDate(1),
+                    )?;
+                    self.update_frequency_table()?;
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::PageUp {
+                    self.habit_day_list_widget.update(
+                        &mut *self.datafile,
+                        HabitDayListWidgetInput::NavigateDate(
+                            self.habit_day_list_widget
+                                .get_render_height()
+                                .unwrap_or_default() as isize,
+                        ),
+                    )?;
+                    self.update_frequency_table()?;
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Down {
+                    self.habit_day_list_widget.update(
+                        &mut *self.datafile,
+                        HabitDayListWidgetInput::NavigateDate(-1),
+                    )?;
+                    self.update_frequency_table()?;
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::PageDown {
+                    self.habit_day_list_widget.update(
+                        &mut *self.datafile,
+                        HabitDayListWidgetInput::NavigateDate(
+                            -(self
+                                .habit_day_list_widget
+                                .get_render_height()
+                                .unwrap_or_default() as isize),
+                        ),
+                    )?;
+                    self.update_frequency_table()?;
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Enter {
+                    self.habit_day_list_widget
+                        .update(&mut *self.datafile, HabitDayListWidgetInput::SwitchMode)?;
+                    self.update_frequency_table()?;
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Left {
+                    self.habit_day_list_widget.update(
+                        &mut *self.datafile,
+                        HabitDayListWidgetInput::NavigateColumn(-1),
+                    )?;
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Right {
+                    self.habit_day_list_widget.update(
+                        &mut *self.datafile,
+                        HabitDayListWidgetInput::NavigateColumn(1),
+                    )?;
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char(' ') {
+                    self.habit_day_list_widget
+                        .update(&mut *self.datafile, HabitDayListWidgetInput::SwitchValue)?;
                 }
             }
-            self.habit_day_list_widget
-                .handle_events(HabitDayListWidgetContext::new(&mut *self.datafile), &event)?;
         }
         Ok(false)
     }
@@ -81,5 +129,17 @@ impl UiApp {
             .split(frame.size());
         self.habit_day_list_widget.render(frame, chunks[0]);
         self.habit_frequency_table_widget.render(frame, chunks[1]);
+    }
+
+    fn update_frequency_table(&mut self) -> Result<()> {
+        let selected_date = self
+            .habit_day_list_widget
+            .get_selected_date()
+            .unwrap_or_else(|| Local::now().date_naive());
+        self.habit_frequency_table_widget.update(
+            &*self.datafile,
+            HabitFrequencyTableWidgetInput::SetBeginDate(selected_date),
+        )?;
+        Ok(())
     }
 }
