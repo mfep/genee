@@ -159,7 +159,7 @@ impl HabitDayListWidget {
         Ok(())
     }
 
-    pub fn render_habit_table(&mut self, frame: &mut Frame) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect) {
         let widths: Vec<Constraint> = (0..self.header.len() + 1)
             .map(|i| {
                 if i == 0 {
@@ -175,7 +175,7 @@ impl HabitDayListWidget {
         let table = Table::new(rows, widths)
             .header(get_table_header(&self.header))
             .block(Block::new().borders(Borders::ALL));
-        frame.render_stateful_widget(table, frame.size(), &mut self.habit_table_state);
+        frame.render_stateful_widget(table, area, &mut self.habit_table_state);
     }
 }
 
