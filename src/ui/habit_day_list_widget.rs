@@ -1,7 +1,11 @@
+use super::Scale;
 use anyhow::Result;
 use chrono::NaiveDate;
 use genee::datafile::DiaryDataConnection;
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    prelude::*,
+    widgets::{block::Title, *},
+};
 
 const DEFAULT_STARTING_HABIT_ROWS: usize = 100;
 
@@ -26,11 +30,14 @@ pub struct HabitDayListWidget {
     start_date: NaiveDate,
     state: WidgetState,
     edit_col_idx: usize,
-    render_height: Option<u16>,
+    scale: Scale,
 }
 
 pub enum HabitDayListWidgetInput {
-    NavigateDate(isize),
+    StepEarlier,
+    StepLater,
+    StrideEarlier,
+    StrideLater,
     NavigateColumn(isize),
     SwitchMode,
     SwitchValue,
@@ -49,7 +56,7 @@ impl HabitDayListWidget {
             start_date,
             state: WidgetState::Browsing,
             edit_col_idx: 0,
-            render_height: None,
+            scale: Scale::Monthly,
         };
         widget.load_habit_row_batch(datafile, &start_date)?;
         Ok(widget)
@@ -61,15 +68,17 @@ impl HabitDayListWidget {
         input: HabitDayListWidgetInput,
     ) -> Result<()> {
         match input {
-            HabitDayListWidgetInput::NavigateDate(offset) => {
-                assert_ne!(offset, 0);
-                if let WidgetState::Browsing = &self.state {
-                    let current_row_idx =
-                        self.habit_table_state.selected().unwrap_or_default() as isize;
-                    let new_row_idx = (current_row_idx - offset).max(0isize) as usize;
-                    self.ensure_habit_row_index(datafile, new_row_idx)?;
-                    self.habit_table_state.select(Some(new_row_idx));
-                }
+            HabitDayListWidgetInput::StepEarlier => {
+                self.navigate_date(datafile, 1)?;
+            }
+            HabitDayListWidgetInput::StepLater => {
+                self.navigate_date(datafile, -1)?;
+            }
+            HabitDayListWidgetInput::StrideEarlier => {
+                self.navigate_date(datafile, self.scale.value() as isize)?;
+            }
+            HabitDayListWidgetInput::StrideLater => {
+                self.navigate_date(datafile, -(self.scale.value() as isize))?;
             }
             HabitDayListWidgetInput::NavigateColumn(offset) => {
                 if let WidgetState::Editing(_) = &self.state {
@@ -77,6 +86,10 @@ impl HabitDayListWidget {
                     if new_val >= 0 && new_val < self.header.len() as isize {
                         self.edit_col_idx = new_val as usize;
                     }
+                } else if offset > 0 {
+                    self.scale = self.scale.larger();
+                } else {
+                    self.scale = self.scale.smaller();
                 }
             }
             HabitDayListWidgetInput::SwitchMode => {
@@ -114,14 +127,25 @@ impl HabitDayListWidget {
         Ok(())
     }
 
-    pub fn get_render_height(&self) -> Option<u16> {
-        self.render_height
-    }
-
     pub fn get_selected_date(&self) -> Option<NaiveDate> {
         self.habit_table_state
             .selected()
             .map(|idx| self.habit_rows[idx].0)
+    }
+
+    pub fn get_scale(&self) -> Scale {
+        self.scale
+    }
+
+    fn navigate_date(&mut self, datafile: &dyn DiaryDataConnection, offset: isize) -> Result<()> {
+        assert_ne!(offset, 0);
+        if let WidgetState::Browsing = &self.state {
+            let current_row_idx = self.habit_table_state.selected().unwrap_or_default() as isize;
+            let new_row_idx = (current_row_idx - offset).max(0isize) as usize;
+            self.ensure_habit_row_index(datafile, new_row_idx)?;
+            self.habit_table_state.select(Some(new_row_idx));
+        }
+        Ok(())
     }
 
     fn load_habit_row_batch(
@@ -148,7 +172,7 @@ impl HabitDayListWidget {
         datafile: &dyn DiaryDataConnection,
         index: usize,
     ) -> Result<()> {
-        if index >= self.habit_rows.len() {
+        while index >= self.habit_rows.len() {
             self.load_habit_row_batch(
                 datafile,
                 &(self.start_date - chrono::Duration::days(index as i64)),
@@ -158,7 +182,6 @@ impl HabitDayListWidget {
     }
 
     pub fn render(&mut self, frame: &mut Frame, area: Rect) {
-        self.render_height = Some(area.height - 3);
         let widths: Vec<Constraint> = (0..self.header.len() + 1)
             .map(|i| {
                 if i == 0 {
@@ -173,8 +196,32 @@ impl HabitDayListWidget {
 
         let table = Table::new(rows, widths)
             .header(get_table_header(&self.header))
-            .block(Block::new().borders(Borders::ALL));
+            .block(
+                Block::new()
+                    .borders(Borders::ALL)
+                    .title(self.get_footer())
+                    .title_position(block::Position::Bottom)
+                    .title(
+                        Title::default()
+                            .content("Daily habit data")
+                            .position(block::Position::Top),
+                    ),
+            );
         frame.render_stateful_widget(table, area, &mut self.habit_table_state);
+    }
+
+    fn get_footer(&self) -> String {
+        match &self.state {
+            WidgetState::Browsing => {
+                format!(
+                    "Step: <↑><↓> Stride ({}): <PgUp><PgDown> Edit: <RETURN> Change scale: <←><→> Exit: <Q>",
+                    &self.scale
+                )
+            }
+            WidgetState::Editing(_) => {
+                String::from("Step: <←><→> Toggle: <SPACE> Apply: <RETURN> Exit: <Q>")
+            }
+        }
     }
 
     fn get_daily_habit_rows<'a>(&self) -> Vec<Row<'a>> {

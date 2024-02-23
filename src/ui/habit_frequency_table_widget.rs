@@ -1,7 +1,13 @@
 use crate::datafile::{self, DiaryDataConnection};
 use anyhow::Result;
 use chrono::{Local, NaiveDate};
-use ratatui::{prelude::*, style::Color, widgets::*};
+use ratatui::{
+    prelude::*,
+    style::Color,
+    widgets::{block::Title, *},
+};
+
+use super::Scale;
 
 const COLORS: [Color; 6] = [
     Color::LightCyan,
@@ -18,7 +24,8 @@ fn get_color(idx: usize) -> Color {
 
 pub struct HabitFrequencyTableWidget {
     header: Vec<(String, usize)>,
-    range_size: usize,
+    begin_date: NaiveDate,
+    scale: Scale,
     iters: usize,
     date_ranges: Vec<(NaiveDate, NaiveDate)>,
     data_counts: Vec<Vec<usize>>,
@@ -26,29 +33,46 @@ pub struct HabitFrequencyTableWidget {
 
 pub enum HabitFrequencyTableWidgetInput {
     SetBeginDate(NaiveDate),
+    SmallerScale,
+    LargerScale,
+    FewerPeriods,
+    MorePeriods,
+    DataChanged,
 }
 
 impl HabitFrequencyTableWidget {
     pub fn new(
         datafile: &dyn DiaryDataConnection,
-        range_size: usize,
+        scale: Scale,
         iters: usize,
     ) -> Result<HabitFrequencyTableWidget> {
         let header = datafile.get_header()?;
-        let date_ranges = datafile::get_date_ranges(&Local::now().date_naive(), range_size, iters);
-        let data_counts = datafile.calculate_data_counts_per_iter(&date_ranges)?;
-        Ok(HabitFrequencyTableWidget {
+        let begin_date = Local::now().date_naive();
+        let mut result = HabitFrequencyTableWidget {
             header,
-            range_size,
+            scale,
             iters,
-            date_ranges,
-            data_counts,
-        })
+            begin_date,
+            date_ranges: vec![],
+            data_counts: vec![],
+        };
+        result.recalculate(datafile)?;
+        Ok(result)
     }
 
     pub fn render(&self, frame: &mut Frame, area: Rect) {
         let inner_area = area.inner(&Margin::new(1, 1));
-        frame.render_widget(Block::default().borders(Borders::ALL), area);
+        frame.render_widget(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(self.title())
+                .title(
+                    Title::default()
+                        .content("Change scale: <Ctrl> + <←><→> Change periods: <a><s>")
+                        .position(block::Position::Bottom),
+                ),
+            area,
+        );
 
         let inner_chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -73,7 +97,8 @@ impl HabitFrequencyTableWidget {
             .direction(Direction::Horizontal)
             .bar_gap(0)
             .bar_width(1)
-            .group_gap(1);
+            .group_gap(1)
+            .max(self.scale.value() as u64);
         for (idx, (name, _id)) in self.header.iter().enumerate() {
             let bars: Vec<Bar> = self
                 .data_counts
@@ -103,10 +128,45 @@ impl HabitFrequencyTableWidget {
     ) -> Result<()> {
         match input {
             HabitFrequencyTableWidgetInput::SetBeginDate(date) => {
-                self.date_ranges = datafile::get_date_ranges(&date, self.range_size, self.iters);
-                self.data_counts = datafile.calculate_data_counts_per_iter(&self.date_ranges)?;
+                if date != self.begin_date {
+                    self.begin_date = date;
+                    self.recalculate(datafile)?;
+                }
+            }
+            HabitFrequencyTableWidgetInput::SmallerScale => {
+                self.scale = self.scale.smaller();
+                self.recalculate(datafile)?;
+            }
+            HabitFrequencyTableWidgetInput::LargerScale => {
+                self.scale = self.scale.larger();
+                self.recalculate(datafile)?;
+            }
+            HabitFrequencyTableWidgetInput::FewerPeriods => {
+                self.iters = usize::max(1usize, self.iters - 1);
+                self.recalculate(datafile)?;
+            }
+            HabitFrequencyTableWidgetInput::MorePeriods => {
+                self.iters = usize::max(1usize, self.iters + 1);
+                self.recalculate(datafile)?;
+            }
+            HabitFrequencyTableWidgetInput::DataChanged => {
+                self.recalculate(datafile)?;
             }
         }
         Ok(())
+    }
+
+    fn recalculate(&mut self, datafile: &dyn DiaryDataConnection) -> Result<()> {
+        self.date_ranges =
+            datafile::get_date_ranges(&self.begin_date, self.scale.value(), self.iters);
+        self.data_counts = datafile.calculate_data_counts_per_iter(&self.date_ranges)?;
+        Ok(())
+    }
+
+    fn title(&self) -> String {
+        format!(
+            "Habit histogram: {} {} periods until {}",
+            self.iters, self.scale, self.begin_date
+        )
     }
 }
