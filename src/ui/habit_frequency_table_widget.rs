@@ -74,9 +74,13 @@ impl HabitFrequencyTableWidget {
             area,
         );
 
+        const DATE_RANGE_CHAR_COUNT: u16 = 24; // "2024-01-29 - 2024-02-27 "
+        let date_range_num_chars = self.date_ranges.len() as u16 * DATE_RANGE_CHAR_COUNT;
+        let date_range_lines = (date_range_num_chars + inner_area.width - 1) / inner_area.width;
+
         let inner_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(1), Constraint::Min(0)])
+            .constraints([Constraint::Min(date_range_lines), Constraint::Min(0)])
             .split(inner_area);
 
         let date_list_text: Vec<Span> = self
@@ -91,7 +95,12 @@ impl HabitFrequencyTableWidget {
             })
             .collect();
         let date_list_text = Line::from(date_list_text);
-        frame.render_widget(Paragraph::new(date_list_text), inner_chunks[0]);
+        frame.render_widget(
+            Paragraph::new(date_list_text)
+                .wrap(Wrap { trim: true })
+                .style(Style::default().bold()),
+            inner_chunks[0],
+        );
 
         let mut bar_chart = BarChart::default()
             .direction(Direction::Horizontal)
@@ -154,6 +163,13 @@ impl HabitFrequencyTableWidget {
             }
         }
         Ok(())
+    }
+
+    pub fn get_range(&self) -> (NaiveDate, NaiveDate) {
+        (
+            self.date_ranges.last().unwrap().1,
+            self.date_ranges.first().unwrap().0,
+        )
     }
 
     fn recalculate(&mut self, datafile: &dyn DiaryDataConnection) -> Result<()> {

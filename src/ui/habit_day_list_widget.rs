@@ -1,4 +1,4 @@
-use super::Scale;
+use super::{table_utils, Scale};
 use anyhow::Result;
 use chrono::NaiveDate;
 use genee::datafile::DiaryDataConnection;
@@ -111,7 +111,7 @@ impl HabitDayListWidget {
                         self.habit_rows[row_idx as usize].1 = Some(edit_state.habit_vec.clone());
                         datafile.update_data(
                             &edit_state.date,
-                            &encode_habit_vector(&self.header, &edit_state.habit_vec),
+                            &table_utils::encode_habit_vector(&self.header, &edit_state.habit_vec),
                         )?;
                     }
                     self.state = WidgetState::Browsing;
@@ -160,7 +160,7 @@ impl HabitDayListWidget {
         for row in new_rows {
             self.habit_rows.push((
                 date,
-                row.map(|cat_ids| decode_habit_vector(&self.header, &cat_ids)),
+                row.map(|cat_ids| table_utils::decode_habit_vector(&self.header, &cat_ids)),
             ));
             date -= chrono::Duration::days(1);
         }
@@ -195,7 +195,7 @@ impl HabitDayListWidget {
         let rows = self.get_daily_habit_rows();
 
         let table = Table::new(rows, widths)
-            .header(get_table_header(&self.header))
+            .header(table_utils::get_table_header(&self.header, "Date"))
             .block(
                 Block::new()
                     .borders(Borders::ALL)
@@ -270,31 +270,4 @@ impl HabitDayListWidget {
         }
         rows
     }
-}
-
-fn get_table_header<'a>(header: &[(String, usize)]) -> Row<'a> {
-    let mut cells = vec![Cell::new("Date")];
-    for (name, _idx) in header {
-        cells.push(Cell::new(name.clone()));
-    }
-    Row::new(cells).add_modifier(Modifier::BOLD)
-}
-
-fn decode_habit_vector(categories: &[(String, usize)], ids: &[usize]) -> Vec<bool> {
-    let mut v = vec![];
-    for (_, cat_id) in categories {
-        v.push(ids.contains(cat_id));
-    }
-    v
-}
-
-fn encode_habit_vector(categories: &[(String, usize)], entries: &[bool]) -> Vec<usize> {
-    assert_eq!(categories.len(), entries.len());
-    let mut entry_ids = vec![];
-    for (val, (_name, cat_id)) in entries.iter().zip(categories.iter()) {
-        if *val {
-            entry_ids.push(*cat_id);
-        }
-    }
-    entry_ids
 }
