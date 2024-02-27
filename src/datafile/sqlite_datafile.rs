@@ -276,7 +276,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
 
         if let Some(row) = rows.next()? {
             let category_id: usize = row.get(0)?;
-            let hidden = 0usize != row.get(1)?;
+            let hidden = 0usize != row.get::<usize, usize>(1)?;
 
             if hidden {
                 let mut statement = self
@@ -304,7 +304,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
         let mut rows = statement.query(params![name])?;
         if let Some(row) = rows.next()? {
             let category_id: usize = row.get(0)?;
-            let hidden = 0usize != row.get(1)?;
+            let hidden = 0usize != row.get::<usize, usize>(1)?;
             if hidden {
                 Ok(super::HideCategoryResult::AlreadyHidden)
             } else {
