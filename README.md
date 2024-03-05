@@ -15,21 +15,18 @@ genee is a simple habit tracker program for the command line
 ## Workflow
 
 1. Figure out the list of habits to track. In this example, we would like to restrict
-our gaming binges and increase the frequency of our piano exercise sessions.
-`GAM` stands for gaming, whereas `PNO` stands for the instrumental practice.
+   our gaming binges and increase the frequency of our piano exercise sessions.
+   `GAM` stands for gaming, whereas `PNO` stands for the instrumental practice.
 2. Download the [latest release](https://github.com/mfep/genee/releases/latest) from this repository.
 3. Using the downloaded executable, create a new data file to store the diary data.
-Specify the list of habit abbreviations to use in this file: ```genee new GAM,PNO```
+   Specify the list of habit abbreviations to use in this file: `genee new GAM,PNO`
 4. Each day, fill in whether you practiced the particular habits the previous day or not.
-This can be done by invoking ```genee fill```. This is followed by a prompt for each habit.
-5. After the fill command, the program displays the habit data of the current period
-(e.g. the number of habit occurences in the last 30 days) compared to the last period
-(the number of habit occurences between 30 and 60 days before now).
-This can be used to check whether our change of habits (picking up new habits,
-dropping bad ones) are on track or not.
+   Run `genee` which opens an interactive terminal interface. Habit data for each day can be
+   added and edited, and various statistics are shown.
 
-### Example output diagram
-![](https://user-images.githubusercontent.com/12499658/121962015-72212600-cd68-11eb-82fb-30279566b220.png)
+### Screenshot
+
+![A screenshot of the main genee interface](./docs/screenshot.png)
 
 ## Full helptext
 
@@ -38,7 +35,7 @@ genee X.Y.Z
 A habit tracker app with command-line interface
 
 USAGE:
-    genee [OPTIONS] <SUBCOMMAND>
+    genee [OPTIONS] [SUBCOMMAND]
 
 FLAGS:
     -h, --help       Prints help information
@@ -48,32 +45,17 @@ OPTIONS:
     -d, --datafile <datafile>
             Path to the diary file. When not provided, its value is loaded from persistent configuration file
 
-    -g, --graph-days <graph-days>
-            How many days each period should contain. When not provided, its value is loaded from persistent
-            configuration file
     -f, --list-most-frequent-days <list-most-frequent-days>
             Specifies the number of most frequent daily habit compositions over the specified period
 
-    -l, --list-previous-days <list-previous-days>
-            Specifies the number of days from the diary that should be printed in a tabular format
-
-        --max-displayed-cols <max-displayed-cols>
-            Specifies the maximum allowed width of the terminal output. When not provided, its value is loaded from
-            persistent configuration file
     -p, --past-periods <past-periods>
             Specifies the number of displayed periods when graphing the diary data. When not provided, its value is
             loaded from persistent configuration file
 
 SUBCOMMANDS:
     add-category     Adds or unhides a category
-    export           Writes the contents of the datafile into a new datafile. Useful to convert between formats
-    fill             If set, habit information for all the missing days is queried between --from-date and
-                     yesterday. If --from-date is not set, all the missing days are queried between the first entry
-                     in the diary and yesterday. If there is no entry in the diary, only yesterday is queried
-    graph            Displays the habit data according to the specified options to the terminal
     help             Prints this message or the help of the given subcommand(s)
     hide-category    Hides a category
-    insert           Queries for habit information on the specified date
     list-config      Prints the persistent configuration
     new              Provide a comma separated list of habit categories. A new diary file is created at the
                      specified --datafile path
