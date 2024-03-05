@@ -5,7 +5,7 @@ mod top_occurrence_list_widget;
 
 use std::{fmt::Display, io::stdout};
 
-use crate::CliOptions;
+use crate::{configuration, CliOptions};
 use anyhow::Result;
 use chrono::Local;
 use crossterm::{
@@ -46,6 +46,7 @@ struct UiApp {
     habit_day_list_widget: HabitDayListWidget,
     habit_frequency_table_widget: HabitFrequencyTableWidget,
     top_occurrence_list_widget: TopOccurrenceListWidget,
+    opts: CliOptions,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -104,19 +105,23 @@ impl Display for Scale {
 impl UiApp {
     fn new(opts: &CliOptions) -> Result<Self> {
         let datafile = datafile::open_datafile(opts.datafile.as_ref().unwrap())?;
-        let habit_day_list_widget = HabitDayListWidget::new(&*datafile)?;
+        let start_date = Local::now().date_naive();
+        let habit_day_list_widget = HabitDayListWidget::new(&*datafile, start_date)?;
         let habit_frequency_table_widget = HabitFrequencyTableWidget::new(
             &*datafile,
+            start_date,
+            opts,
             habit_day_list_widget.get_scale(),
-            opts.past_periods.unwrap(),
         )?;
         let (from, until) = habit_frequency_table_widget.get_range();
-        let top_occurrence_list_widget = TopOccurrenceListWidget::new(&*datafile, from, until)?;
+        let top_occurrence_list_widget =
+            TopOccurrenceListWidget::new(&*datafile, from, until, opts)?;
         Ok(UiApp {
             datafile,
             habit_day_list_widget,
             habit_frequency_table_widget,
             top_occurrence_list_widget,
+            opts: opts.clone(),
         })
     }
 
@@ -231,5 +236,14 @@ impl UiApp {
             TopOccurrenceListWidgetInput::UpdateRange((from, until)),
         )?;
         Ok(())
+    }
+}
+
+impl Drop for UiApp {
+    fn drop(&mut self) {
+        self.habit_frequency_table_widget
+            .update_opts(&mut self.opts);
+        self.top_occurrence_list_widget.update_opts(&mut self.opts);
+        configuration::save_config_opt(&self.opts).unwrap();
     }
 }

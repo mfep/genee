@@ -44,8 +44,7 @@ pub enum HabitDayListWidgetInput {
 }
 
 impl HabitDayListWidget {
-    pub fn new(datafile: &dyn DiaryDataConnection) -> Result<Self> {
-        let start_date = chrono::Local::now().date_naive();
+    pub fn new(datafile: &dyn DiaryDataConnection, start_date: NaiveDate) -> Result<Self> {
         let mut habit_table_state = TableState::default();
         habit_table_state.select(Some(0));
 

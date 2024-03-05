@@ -9,10 +9,9 @@ use std::{
     path::PathBuf,
 };
 
-pub const DEFAULT_GRAPH_DAYS: usize = 30;
+use crate::CliOptions;
+
 pub const DEFAULT_PAST_PERIODS: usize = 2;
-pub const DEFAULT_MAX_DISPLAYED_COLS: usize = 70;
-pub const DEFAULT_LIST_PREVIOUS_DAYS: usize = 0;
 pub const DEFAULT_LIST_MOST_FREQUENT_DAYS: usize = 5;
 const QUALIFIER_ID: &str = "xyz";
 const ORG_ID: &str = "safeworlds";
@@ -24,17 +23,8 @@ pub struct Config {
     /// Path of the default data file.
     pub datafile_path: PathBuf,
 
-    /// How many days to display per iteration.
-    pub graph_days: usize,
-
     /// How many iterations to display.
     pub past_periods: usize,
-
-    /// Maximum number of columns of the content displayed in the terminal.
-    pub max_displayed_cols: usize,
-
-    /// Specifies the number of days from the diary that should be printed in a tabular format.
-    pub list_previous_days: usize,
 
     /// Specifies the number of most frequent daily habit compositions to print
     pub list_most_frequent_days: usize,
@@ -43,10 +33,7 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Default)]
 struct SerializedConfig {
     datafile_path: Option<PathBuf>,
-    graph_days: Option<usize>,
     past_periods: Option<usize>,
-    max_displayed_cols: Option<usize>,
-    list_previous_days: Option<usize>,
     list_most_frequent_days: Option<usize>,
 }
 
@@ -54,14 +41,7 @@ impl SerializedConfig {
     fn into_config(self) -> Config {
         Config {
             datafile_path: self.datafile_path.unwrap_or(get_default_datafile_path()),
-            graph_days: self.graph_days.unwrap_or(DEFAULT_GRAPH_DAYS),
             past_periods: self.past_periods.unwrap_or(DEFAULT_PAST_PERIODS),
-            max_displayed_cols: self
-                .max_displayed_cols
-                .unwrap_or(DEFAULT_MAX_DISPLAYED_COLS),
-            list_previous_days: self
-                .list_previous_days
-                .unwrap_or(DEFAULT_LIST_PREVIOUS_DAYS),
             list_most_frequent_days: self
                 .list_most_frequent_days
                 .unwrap_or(DEFAULT_LIST_MOST_FREQUENT_DAYS),
@@ -71,10 +51,7 @@ impl SerializedConfig {
     fn from_config(config: &Config) -> Self {
         SerializedConfig {
             datafile_path: Some(config.datafile_path.clone()),
-            graph_days: Some(config.graph_days),
             past_periods: Some(config.past_periods),
-            max_displayed_cols: Some(config.max_displayed_cols),
-            list_previous_days: Some(config.list_previous_days),
             list_most_frequent_days: Some(config.list_most_frequent_days),
         }
     }
@@ -108,6 +85,27 @@ pub fn load_config() -> Result<Config> {
 
     let deserialized_config: SerializedConfig = toml::from_str(&config_content)?;
     Ok(deserialized_config.into_config())
+}
+
+pub fn save_config_opt(opt: &CliOptions) -> Result<()> {
+    let provided_datafile_path = opt
+        .datafile
+        .clone()
+        .unwrap_or_else(get_default_datafile_path);
+    let full_datafile_path = std::fs::canonicalize(provided_datafile_path.clone());
+    if full_datafile_path.is_err() {
+        println!("Cannot canonicalize provided datafile path, saving the uncanonicalized path to configuration");
+    }
+    let updated_config = Config {
+        datafile_path: full_datafile_path.unwrap_or(provided_datafile_path),
+        past_periods: opt.past_periods.unwrap_or(DEFAULT_PAST_PERIODS),
+        list_most_frequent_days: opt
+            .list_most_frequent_days
+            .unwrap_or(DEFAULT_LIST_MOST_FREQUENT_DAYS),
+    };
+    save_config(&updated_config)?;
+    println!("Successfully updated persistent configuration");
+    Ok(())
 }
 
 /// Saves the persistent configuration to its default location.

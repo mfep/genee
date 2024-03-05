@@ -1,6 +1,9 @@
-use crate::datafile::{self, DiaryDataConnection};
+use crate::{
+    datafile::{self, DiaryDataConnection},
+    CliOptions,
+};
 use anyhow::Result;
-use chrono::{Local, NaiveDate};
+use chrono::NaiveDate;
 use ratatui::{
     prelude::*,
     style::Color,
@@ -43,15 +46,15 @@ pub enum HabitFrequencyTableWidgetInput {
 impl HabitFrequencyTableWidget {
     pub fn new(
         datafile: &dyn DiaryDataConnection,
+        begin_date: NaiveDate,
+        opts: &CliOptions,
         scale: Scale,
-        iters: usize,
     ) -> Result<HabitFrequencyTableWidget> {
         let header = datafile.get_header()?;
-        let begin_date = Local::now().date_naive();
         let mut result = HabitFrequencyTableWidget {
             header,
             scale,
-            iters,
+            iters: opts.past_periods.unwrap(),
             begin_date,
             date_ranges: vec![],
             data_counts: vec![],
@@ -170,6 +173,10 @@ impl HabitFrequencyTableWidget {
             self.date_ranges.last().unwrap().1,
             self.date_ranges.first().unwrap().0,
         )
+    }
+
+    pub fn update_opts(&self, opts: &mut CliOptions) {
+        opts.past_periods = Some(self.iters);
     }
 
     fn recalculate(&mut self, datafile: &dyn DiaryDataConnection) -> Result<()> {

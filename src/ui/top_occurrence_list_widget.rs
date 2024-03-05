@@ -1,5 +1,5 @@
 use super::table_utils;
-use crate::datafile::DiaryDataConnection;
+use crate::{datafile::DiaryDataConnection, CliOptions};
 use anyhow::{Ok, Result};
 use chrono::NaiveDate;
 use ratatui::{prelude::*, widgets::*};
@@ -21,13 +21,13 @@ impl TopOccurrenceListWidget {
         datafile: &dyn DiaryDataConnection,
         range_from: NaiveDate,
         range_until: NaiveDate,
+        opts: &CliOptions,
     ) -> Result<Self> {
-        let count = 5usize;
         let header = datafile.get_header()?;
         let mut widget = TopOccurrenceListWidget {
             range_from,
             range_until,
-            count,
+            count: opts.list_most_frequent_days.unwrap(),
             header,
             data: vec![],
         };
@@ -81,6 +81,10 @@ impl TopOccurrenceListWidget {
         Ok(())
     }
 
+    pub fn update_opts(&self, opts: &mut CliOptions) {
+        opts.list_most_frequent_days = Some(self.count);
+    }
+
     fn update_data(&mut self, datafile: &dyn DiaryDataConnection) -> Result<()> {
         self.data = datafile.get_most_frequent_daily_data(
             &Some(self.range_from),
@@ -92,7 +96,7 @@ impl TopOccurrenceListWidget {
 
     fn title(&self) -> String {
         format!(
-            "Most occuring daily habits from {} until {}",
+            "Most occurring daily habits from {} until {}",
             self.range_from, self.range_until
         )
     }
