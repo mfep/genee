@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.0] - Unreleased
+
+### Added
+
+- Added an interactive user interface to edit and visualize habit data. It is accessed via tha main `genee` command (i.e. no subcommand is needed)
+
+### Removed
+
+- Removed redundant non-interactive functionality.
+  - The following subcommands are not available anymore: `export`, `fill`, `graph`, `insert`
+  - The following arguments are not available anymore: `--graph-days`, `--list-previous-days`, `--max-displayed-cols`
+
 ## [v0.8.0] - 2024-01-28
 
 ### Added

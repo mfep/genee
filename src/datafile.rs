@@ -72,6 +72,11 @@ pub trait DiaryDataConnection {
     /// or None, if the date is not present in the database.
     fn get_row(&self, date: &NaiveDate) -> Result<Option<Vec<usize>>>;
 
+    /// Gets the category IDs of habits of dates that are no earlier as `from` and not more recent
+    /// than `until`. If the date is not in the database, None is returned for the specified date.
+    /// The rows are returned in date-descending order.
+    fn get_rows(&self, from: &NaiveDate, until: &NaiveDate) -> Result<Vec<Option<Vec<usize>>>>;
+
     /// Returns if the database contains any records.
     fn is_empty(&self) -> Result<bool>;
 
