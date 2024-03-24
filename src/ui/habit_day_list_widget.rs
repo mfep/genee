@@ -152,7 +152,8 @@ impl HabitDayListWidget {
         datafile: &dyn DiaryDataConnection,
         batch_start_date: &NaiveDate,
     ) -> Result<()> {
-        let from = *batch_start_date - chrono::Duration::days(DEFAULT_STARTING_HABIT_ROWS as i64);
+        let from = *batch_start_date
+            - chrono::Duration::try_days(DEFAULT_STARTING_HABIT_ROWS as i64).unwrap();
         let new_rows = datafile.get_rows(&from, batch_start_date)?;
 
         let mut date = *batch_start_date;
@@ -161,7 +162,7 @@ impl HabitDayListWidget {
                 date,
                 row.map(|cat_ids| table_utils::decode_habit_vector(&self.header, &cat_ids)),
             ));
-            date -= chrono::Duration::days(1);
+            date -= chrono::Duration::try_days(1).unwrap();
         }
         Ok(())
     }
@@ -174,7 +175,7 @@ impl HabitDayListWidget {
         while index >= self.habit_rows.len() {
             self.load_habit_row_batch(
                 datafile,
-                &(self.start_date - chrono::Duration::days(index as i64)),
+                &(self.start_date - chrono::Duration::try_days(index as i64).unwrap()),
             )?;
         }
         Ok(())

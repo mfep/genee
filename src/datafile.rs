@@ -118,8 +118,8 @@ pub fn get_date_ranges(
         .zip(end_offsets)
         .map(|(start, end)| {
             (
-                *from_date - Duration::days(start as i64),
-                *from_date - Duration::days(end as i64),
+                *from_date - Duration::try_days(start as i64).unwrap(),
+                *from_date - Duration::try_days(end as i64).unwrap(),
             )
         })
         .collect()

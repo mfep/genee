@@ -1,6 +1,6 @@
 //! Handling SQLite habit databases.
 use anyhow::{bail, Context, Result};
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{DateTime, NaiveDate, NaiveTime};
 use std::{ffi::OsString, path::Path};
 
 use super::DiaryDataConnection;
@@ -97,7 +97,7 @@ pub fn open_sqlite_datafile(path: &Path) -> Result<Box<dyn DiaryDataConnection>>
 }
 
 fn date_to_timestamp(date: &NaiveDate) -> i64 {
-    date.and_time(chrono::NaiveTime::default()).timestamp()
+    date.and_time(NaiveTime::default()).and_utc().timestamp()
 }
 
 impl DiaryDataConnection for DiaryDataSqlite {
@@ -107,7 +107,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
 
     fn calculate_data_counts_per_iter(
         &self,
-        date_ranges: &[(chrono::NaiveDate, chrono::NaiveDate)],
+        date_ranges: &[(NaiveDate, NaiveDate)],
     ) -> Result<Vec<Vec<usize>>> {
         let category_ids = self.get_visible_category_ids()?;
         let mut result = vec![];
@@ -119,7 +119,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
 
     fn update_data(
         &mut self,
-        date: &chrono::NaiveDate,
+        date: &NaiveDate,
         new_row: &[usize],
     ) -> Result<super::SuccessfulUpdate> {
         self.update_data_internal(&[(*date, new_row.to_vec())])
@@ -132,9 +132,9 @@ impl DiaryDataConnection for DiaryDataSqlite {
 
     fn get_missing_dates(
         &self,
-        from: &Option<chrono::NaiveDate>,
-        until: &chrono::NaiveDate,
-    ) -> Result<Vec<chrono::NaiveDate>> {
+        from: &Option<NaiveDate>,
+        until: &NaiveDate,
+    ) -> Result<Vec<NaiveDate>> {
         if self.is_empty()? {
             return Ok(vec![]);
         }
@@ -145,28 +145,24 @@ impl DiaryDataConnection for DiaryDataSqlite {
             None => {
                 let mut statement = self.connection.prepare("SELECT MIN(date) FROM DateEntry")?;
                 let min_date = statement.query_row([], |row| row.get(0))?;
-                NaiveDateTime::from_timestamp_opt(min_date, 0)
-                    .unwrap()
-                    .date()
+                DateTime::from_timestamp(min_date, 0).unwrap().date_naive()
             }
         };
 
         let mut statement = self
             .connection
             .prepare("SELECT date FROM DateEntry WHERE date>=?1 AND date<=?2")?;
-        let from_timestamp = from.and_time(chrono::NaiveTime::default()).timestamp();
-        let until_timestamp = until.and_time(chrono::NaiveTime::default()).timestamp();
+        let from_timestamp = from.and_time(NaiveTime::default()).and_utc().timestamp();
+        let until_timestamp = until.and_time(NaiveTime::default()).and_utc().timestamp();
         let rows = statement.query_map([from_timestamp, until_timestamp], |row| row.get(0))?;
         let mut missing_dates = vec![];
 
         let mut current_date = from;
         for date_val in rows {
-            let next_present_day = NaiveDateTime::from_timestamp_opt(date_val?, 0)
-                .unwrap()
-                .date();
+            let next_present_day = DateTime::from_timestamp(date_val?, 0).unwrap().date_naive();
             while current_date <= *until {
                 let last_date = current_date;
-                current_date += chrono::Duration::days(1);
+                current_date += chrono::Duration::try_days(1).unwrap();
                 if next_present_day == last_date {
                     break;
                 }
@@ -175,7 +171,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
         }
         while current_date <= *until {
             missing_dates.push(current_date);
-            current_date += chrono::Duration::days(1);
+            current_date += chrono::Duration::try_days(1).unwrap();
         }
 
         Ok(missing_dates)
@@ -195,7 +191,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
         Ok(header)
     }
 
-    fn get_row(&self, date: &chrono::NaiveDate) -> Result<Option<Vec<usize>>> {
+    fn get_row(&self, date: &NaiveDate) -> Result<Option<Vec<usize>>> {
         Ok(self.get_rows(date, date)?.pop().unwrap())
     }
 
@@ -216,13 +212,13 @@ impl DiaryDataConnection for DiaryDataSqlite {
         while current_date >= *from {
             if let Some(row) = rows.next()? {
                 let timestamp_s: i64 = row.get(0)?;
-                let date = NaiveDateTime::from_timestamp_opt(timestamp_s, 0)
+                let date = DateTime::from_timestamp(timestamp_s, 0)
                     .unwrap()
-                    .date();
+                    .date_naive();
 
                 while date < current_date {
                     results.push(None);
-                    current_date -= chrono::Duration::days(1);
+                    current_date -= chrono::Duration::try_days(1).unwrap();
                 }
                 let row_data: String = row.get(1)?;
                 if row_data == "EMPTY" {
@@ -237,7 +233,7 @@ impl DiaryDataConnection for DiaryDataSqlite {
             } else {
                 results.push(None);
             }
-            current_date -= chrono::Duration::days(1);
+            current_date -= chrono::Duration::try_days(1).unwrap();
         }
         Ok(results)
     }
@@ -258,12 +254,12 @@ impl DiaryDataConnection for DiaryDataSqlite {
             .prepare("SELECT MIN(date), MAX(date) FROM DateEntry")?;
         let mut rows = statement.query([])?;
         let row = rows.next()?.unwrap();
-        let min_date = NaiveDateTime::from_timestamp_opt(row.get(0)?, 0)
+        let min_date = DateTime::from_timestamp(row.get(0)?, 0)
             .unwrap()
-            .date();
-        let max_date = NaiveDateTime::from_timestamp_opt(row.get(1)?, 0)
+            .date_naive();
+        let max_date = DateTime::from_timestamp(row.get(1)?, 0)
             .unwrap()
-            .date();
+            .date_naive();
 
         Ok((min_date, max_date))
     }
@@ -326,11 +322,9 @@ impl DiaryDataConnection for DiaryDataSqlite {
         max_count: Option<usize>,
     ) -> Result<Vec<(Vec<usize>, usize)>> {
         let from_timestamp = from
-            .and_then(|from_date| {
-                Some(from_date.and_time(chrono::NaiveTime::default()).timestamp())
-            })
+            .and_then(|from_date| Some(date_to_timestamp(&from_date)))
             .unwrap_or_default();
-        let until_timestamp = until.and_time(chrono::NaiveTime::default()).timestamp();
+        let until_timestamp = date_to_timestamp(until);
         let max_count = max_count.unwrap_or(usize::MAX);
 
         let mut statement = self.connection.prepare(
@@ -373,8 +367,8 @@ impl DiaryDataSqlite {
             let mut statement = self.connection.prepare(
                 "SELECT COUNT(*) FROM EntryToCategories WHERE category_id=?1 AND date<=?2 AND date>=?3",
             )?;
-            let from_timestamp = from.and_time(chrono::NaiveTime::default()).timestamp();
-            let to_timestamp = to.and_time(chrono::NaiveTime::default()).timestamp();
+            let from_timestamp = date_to_timestamp(from);
+            let to_timestamp = date_to_timestamp(to);
             let count = statement
                 .query_row(params![cat_id, from_timestamp, to_timestamp], |row| {
                     row.get(0)
@@ -397,7 +391,7 @@ impl DiaryDataSqlite {
             let mut statement = self
                 .connection
                 .prepare("DELETE FROM DateEntry WHERE date=?1")?;
-            let date_timestamp = date.and_time(chrono::NaiveTime::default()).timestamp();
+            let date_timestamp = date_to_timestamp(date);
             deleted_date_entries += statement.execute([date_timestamp])?;
 
             // Add entry in DateEntry
@@ -556,19 +550,16 @@ mod tests {
         .unwrap();
         let mut datafile = open_sqlite_database(conn).unwrap();
         datafile
-            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(), &[2])
+            .update_data(&NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(), &[2])
             .unwrap();
         datafile
-            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 3, 3).unwrap(), &[2])
+            .update_data(&NaiveDate::from_ymd_opt(2023, 3, 3).unwrap(), &[2])
             .unwrap();
         datafile
-            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 7).unwrap(), &[3])
+            .update_data(&NaiveDate::from_ymd_opt(2023, 2, 7).unwrap(), &[3])
             .unwrap();
         let missing_dates = datafile
-            .get_missing_dates(
-                &None,
-                &chrono::NaiveDate::from_ymd_opt(2023, 2, 10).unwrap(),
-            )
+            .get_missing_dates(&None, &NaiveDate::from_ymd_opt(2023, 2, 10).unwrap())
             .unwrap();
         assert_eq!(
             missing_dates,
@@ -589,16 +580,10 @@ mod tests {
         assert_eq!(data_counts, vec![vec![0, 2, 1]]);
 
         let (min_date, max_date) = datafile.get_date_range().unwrap();
-        assert_eq!(
-            min_date,
-            chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap()
-        );
-        assert_eq!(
-            max_date,
-            chrono::NaiveDate::from_ymd_opt(2023, 3, 3).unwrap()
-        );
+        assert_eq!(min_date, NaiveDate::from_ymd_opt(2023, 2, 4).unwrap());
+        assert_eq!(max_date, NaiveDate::from_ymd_opt(2023, 3, 3).unwrap());
         let data_at = datafile
-            .get_row(&chrono::NaiveDate::from_ymd_opt(2023, 2, 7).unwrap())
+            .get_row(&NaiveDate::from_ymd_opt(2023, 2, 7).unwrap())
             .unwrap();
         assert_eq!(Some(vec![3]), data_at);
     }
@@ -688,28 +673,25 @@ mod tests {
         .unwrap();
         let mut datafile = open_sqlite_database(conn).unwrap();
         datafile
-            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(), &[2])
+            .update_data(&NaiveDate::from_ymd_opt(2023, 2, 4).unwrap(), &[2])
             .unwrap();
         datafile
-            .update_data(
-                &chrono::NaiveDate::from_ymd_opt(2023, 2, 6).unwrap(),
-                &[1, 3],
-            )
+            .update_data(&NaiveDate::from_ymd_opt(2023, 2, 6).unwrap(), &[1, 3])
             .unwrap();
         datafile
-            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 7).unwrap(), &[3])
+            .update_data(&NaiveDate::from_ymd_opt(2023, 2, 7).unwrap(), &[3])
             .unwrap();
         datafile
-            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 8).unwrap(), &[3])
+            .update_data(&NaiveDate::from_ymd_opt(2023, 2, 8).unwrap(), &[3])
             .unwrap();
         datafile
-            .update_data(&chrono::NaiveDate::from_ymd_opt(2023, 2, 9).unwrap(), &[3])
+            .update_data(&NaiveDate::from_ymd_opt(2023, 2, 9).unwrap(), &[3])
             .unwrap();
 
         let most_frequent_days = datafile
             .get_most_frequent_daily_data(
-                &chrono::NaiveDate::from_ymd_opt(2023, 2, 6),
-                &chrono::NaiveDate::from_ymd_opt(2023, 2, 8).unwrap(),
+                &NaiveDate::from_ymd_opt(2023, 2, 6),
+                &NaiveDate::from_ymd_opt(2023, 2, 8).unwrap(),
                 Some(3usize),
             )
             .unwrap();

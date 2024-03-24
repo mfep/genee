@@ -50,7 +50,8 @@ fn generate_data(cols: usize, rows: usize) -> Vec<(NaiveDate, Vec<usize>)> {
                 row_data.push(col)
             }
         }
-        let date = Local::now().naive_local() + Duration::days(1 + row as i64 - rows as i64);
+        let date =
+            Local::now().naive_local() + Duration::try_days(1 + row as i64 - rows as i64).unwrap();
         data.push((date.date(), row_data));
     }
     data
