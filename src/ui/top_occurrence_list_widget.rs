@@ -39,9 +39,9 @@ impl TopOccurrenceListWidget {
         let widths: Vec<Constraint> = (0..self.header.len() + 1)
             .map(|i| {
                 if i == 0 {
-                    Constraint::Min(5)
+                    Constraint::Max(5)
                 } else {
-                    Constraint::Min(3)
+                    Constraint::Max(3)
                 }
             })
             .collect();
@@ -57,8 +57,7 @@ impl TopOccurrenceListWidget {
             }
             rows.push(Row::new(cells));
         }
-        let table = Table::new(rows, widths)
-            .block(Block::default().borders(Borders::ALL).title(self.title()));
+        let table = Table::new(rows, widths).block(Block::bordered().title(self.title()));
         frame.render_widget(table, area);
     }
 

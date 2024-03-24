@@ -66,14 +66,11 @@ impl HabitFrequencyTableWidget {
     pub fn render(&self, frame: &mut Frame, area: Rect) {
         let inner_area = area.inner(&Margin::new(1, 1));
         frame.render_widget(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(self.title())
-                .title(
-                    Title::default()
-                        .content("Change scale: <Ctrl> + <←><→> Change periods: <a><s>")
-                        .position(block::Position::Bottom),
-                ),
+            Block::bordered().title(self.title()).title(
+                Title::default()
+                    .content("Change scale: <Ctrl> + <←><→> Change periods: <a><s>")
+                    .position(block::Position::Bottom),
+            ),
             area,
         );
 
@@ -83,7 +80,7 @@ impl HabitFrequencyTableWidget {
 
         let inner_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(date_range_lines), Constraint::Min(0)])
+            .constraints([Constraint::Max(date_range_lines), Constraint::Min(0)])
             .split(inner_area);
 
         let date_list_text: Vec<Span> = self

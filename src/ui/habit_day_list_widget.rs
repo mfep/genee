@@ -185,9 +185,9 @@ impl HabitDayListWidget {
         let widths: Vec<Constraint> = (0..self.header.len() + 1)
             .map(|i| {
                 if i == 0 {
-                    Constraint::Min(12)
+                    Constraint::Max(12)
                 } else {
-                    Constraint::Min(3)
+                    Constraint::Max(3)
                 }
             })
             .collect();
@@ -197,8 +197,7 @@ impl HabitDayListWidget {
         let table = Table::new(rows, widths)
             .header(table_utils::get_table_header(&self.header, "Date"))
             .block(
-                Block::new()
-                    .borders(Borders::ALL)
+                Block::bordered()
                     .title(self.get_footer())
                     .title_position(block::Position::Bottom)
                     .title(
