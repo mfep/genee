@@ -104,7 +104,6 @@ pub fn save_config_opt(opt: &CliOptions) -> Result<()> {
             .unwrap_or(DEFAULT_LIST_MOST_FREQUENT_DAYS),
     };
     save_config(&updated_config)?;
-    println!("Successfully updated persistent configuration");
     Ok(())
 }
 
