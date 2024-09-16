@@ -3,6 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/genee.svg)](https://crates.io/crates/genee)
 [![Docs.rs](https://docs.rs/genee/badge.svg)](https://docs.rs/genee)
 [![CI](https://github.com/mfep/genee/workflows/CI/badge.svg)](https://github.com/mfep/genee/actions)
+[![dependency status](https://deps.rs/repo/github/mfep/genee/status.svg)](https://deps.rs/repo/github/mfep/genee)
 
 genee is a simple habit tracker program for the command line
 

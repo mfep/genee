@@ -200,7 +200,7 @@ impl UiApp {
         let horizontal_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(frame.size());
+            .split(frame.area());
         let left_vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([

@@ -64,7 +64,7 @@ impl HabitFrequencyTableWidget {
     }
 
     pub fn render(&self, frame: &mut Frame, area: Rect) {
-        let inner_area = area.inner(&Margin::new(1, 1));
+        let inner_area = area.inner(Margin::new(1, 1));
         frame.render_widget(
             Block::bordered().title(self.title()).title(
                 Title::default()
