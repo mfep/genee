@@ -1,28 +1,28 @@
 use anyhow::Result;
 use chrono::{Duration, Local, NaiveDate};
+use clap::Parser;
 use genee::datafile;
 use rand::prelude::*;
 use std::char;
 use std::path::PathBuf;
-use structopt::StructOpt;
 
 const A_IDX: u32 = b'A' as u32;
 const Z_IDX: u32 = b'Z' as u32;
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 struct Opt {
-    #[structopt(short, long, parse(from_os_str))]
+    #[arg(short, long)]
     file: PathBuf,
 
-    #[structopt(short, long)]
+    #[arg(short, long)]
     rows: usize,
 
-    #[structopt(short, long)]
+    #[arg(short, long)]
     cols: usize,
 }
 
 fn main() -> Result<()> {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
     let headers = generate_header(opt.cols);
     datafile::create_new_datafile(&opt.file, &headers)?;
     let mut data = datafile::open_datafile(&opt.file)?;

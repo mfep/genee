@@ -32,35 +32,29 @@ genee is a simple habit tracker program for the command line
 ## Full helptext
 
 ```
-genee X.Y.Z
 A habit tracker app with command-line interface
 
-USAGE:
-    genee [OPTIONS] [SUBCOMMAND]
+Usage: genee [OPTIONS] [COMMAND]
 
-FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+Commands:
+  list-config    Prints the persistent configuration
+  new            Provide a comma separated list of habit categories. A new diary file is created at the specified --datafile path
+  save-config    Saves the specified options to persistent configuration
+  add-category   Adds or unhides a category
+  hide-category  Hides a category
+  help           Print this message or the help of the given subcommand(s)
 
-OPTIONS:
-    -d, --datafile <datafile>
-            Path to the diary file. When not provided, its value is loaded from persistent configuration file
-
-    -f, --list-most-frequent-days <list-most-frequent-days>
-            Specifies the number of most frequent daily habit compositions over the specified period
-
-    -p, --past-periods <past-periods>
-            Specifies the number of displayed periods when graphing the diary data. When not provided, its value is
-            loaded from persistent configuration file
-
-SUBCOMMANDS:
-    add-category     Adds or unhides a category
-    help             Prints this message or the help of the given subcommand(s)
-    hide-category    Hides a category
-    list-config      Prints the persistent configuration
-    new              Provide a comma separated list of habit categories. A new diary file is created at the
-                     specified --datafile path
-    save-config      Saves the specified options to persistent configuration
+Options:
+  -d, --datafile <DATAFILE>
+          Path to the diary file. When not provided, its value is loaded from persistent configuration file
+  -p, --past-periods <PAST_PERIODS>
+          Specifies the number of displayed periods when graphing the diary data. When not provided, its value is loaded from persistent configuration file
+  -f, --list-most-frequent-days <LIST_MOST_FREQUENT_DAYS>
+          Specifies the number of most frequent daily habit compositions over the specified period
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```
 
 ## Building

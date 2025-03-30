@@ -17,11 +17,11 @@ keywords = ["habit-tracking"]
 [dependencies]
 anyhow = "1.0"
 chrono = "0.4"
+clap = { version = "4", features = ["derive"] }
 crossterm = "0.28"
 directories-next = "2.0"
 rand = "0.9"
 ratatui = "0.29"
 rusqlite = { version = "0.34", features = ["bundled", "backup"] }
 serde = { version = "1.0", features = ["derive"] }
-structopt = "0.3"
 toml = "0.8"

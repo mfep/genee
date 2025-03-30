@@ -1,33 +1,33 @@
 use anyhow::{Result, bail};
+use clap::Parser;
 use genee::datafile;
 use std::path::{Path, PathBuf};
-use structopt::StructOpt;
 
 mod configuration;
 mod ui;
 
-#[derive(StructOpt, Clone)]
-#[structopt(about)]
+#[derive(Parser, Clone)]
+#[command(version, about)]
 struct CliOptions {
     /// Path to the diary file.
     /// When not provided, its value is loaded from persistent configuration file.
-    #[structopt(short, long, parse(from_os_str))]
+    #[arg(short, long)]
     datafile: Option<PathBuf>,
 
     /// Specifies the number of displayed periods when graphing the diary data.
     /// When not provided, its value is loaded from persistent configuration file.
-    #[structopt(short, long)]
+    #[arg(short, long)]
     past_periods: Option<usize>,
 
     /// Specifies the number of most frequent daily habit compositions over the specified period.
-    #[structopt(short = "f", long)]
+    #[arg(short = 'f', long)]
     list_most_frequent_days: Option<usize>,
 
-    #[structopt(subcommand)]
+    #[command(subcommand)]
     command: Option<Command>,
 }
 
-#[derive(StructOpt, Clone)]
+#[derive(Parser, Clone)]
 enum Command {
     /// Prints the persistent configuration.
     ListConfig,
@@ -79,7 +79,7 @@ fn main() -> Result<()> {
 }
 
 fn handle_config() -> Result<CliOptions> {
-    let opt = CliOptions::from_args();
+    let opt = CliOptions::parse();
     let persistent_config = configuration::load_config()?;
     let opt = merge_cli_and_persistent_options(opt, &persistent_config);
     Ok(opt)
