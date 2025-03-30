@@ -1,6 +1,6 @@
 use crate::{
-    datafile::{self, DiaryDataConnection},
     CliOptions,
+    datafile::{self, DiaryDataConnection},
 };
 use anyhow::Result;
 use chrono::NaiveDate;

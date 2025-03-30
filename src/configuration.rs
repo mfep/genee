@@ -94,7 +94,9 @@ pub fn save_config_opt(opt: &CliOptions) -> Result<()> {
         .unwrap_or_else(get_default_datafile_path);
     let full_datafile_path = std::fs::canonicalize(provided_datafile_path.clone());
     if full_datafile_path.is_err() {
-        println!("Cannot canonicalize provided datafile path, saving the uncanonicalized path to configuration");
+        println!(
+            "Cannot canonicalize provided datafile path, saving the uncanonicalized path to configuration"
+        );
     }
     let updated_config = Config {
         datafile_path: full_datafile_path.unwrap_or(provided_datafile_path),

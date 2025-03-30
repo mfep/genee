@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use genee::datafile;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;

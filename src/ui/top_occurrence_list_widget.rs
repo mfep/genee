@@ -1,5 +1,5 @@
 use super::table_utils;
-use crate::{datafile::DiaryDataConnection, CliOptions};
+use crate::{CliOptions, datafile::DiaryDataConnection};
 use anyhow::{Ok, Result};
 use chrono::NaiveDate;
 use ratatui::{prelude::*, widgets::*};

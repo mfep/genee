@@ -1,4 +1,4 @@
-use super::{table_utils, Scale};
+use super::{Scale, table_utils};
 use anyhow::Result;
 use chrono::NaiveDate;
 use genee::datafile::DiaryDataConnection;

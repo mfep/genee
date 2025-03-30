@@ -1,10 +1,10 @@
 //! Handling SQLite habit databases.
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::{DateTime, NaiveDate, NaiveTime};
 use std::{ffi::OsString, path::Path};
 
 use super::DiaryDataConnection;
-use rusqlite::{backup, params, Connection};
+use rusqlite::{Connection, backup, params};
 
 struct DiaryDataSqlite {
     connection: Connection,

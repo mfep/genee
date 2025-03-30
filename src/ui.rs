@@ -5,12 +5,12 @@ mod top_occurrence_list_widget;
 
 use std::{fmt::Display, io::stdout};
 
-use crate::{configuration, CliOptions};
+use crate::{CliOptions, configuration};
 use anyhow::Result;
 use chrono::Local;
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     ExecutableCommand,
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
 };
 use genee::datafile::{self, DiaryDataConnection};
 use ratatui::prelude::*;
