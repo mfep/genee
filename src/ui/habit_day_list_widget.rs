@@ -2,10 +2,7 @@ use super::{table_utils, Scale};
 use anyhow::Result;
 use chrono::NaiveDate;
 use genee::datafile::DiaryDataConnection;
-use ratatui::{
-    prelude::*,
-    widgets::{block::Title, *},
-};
+use ratatui::{prelude::*, widgets::*};
 
 const DEFAULT_STARTING_HABIT_ROWS: usize = 100;
 
@@ -200,11 +197,7 @@ impl HabitDayListWidget {
                 Block::bordered()
                     .title(self.get_footer())
                     .title_position(block::Position::Bottom)
-                    .title(
-                        Title::default()
-                            .content("Daily habit data")
-                            .position(block::Position::Top),
-                    ),
+                    .title_top("Daily habit data"),
             );
         frame.render_stateful_widget(table, area, &mut self.habit_table_state);
     }

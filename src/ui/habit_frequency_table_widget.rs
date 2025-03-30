@@ -4,11 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::NaiveDate;
-use ratatui::{
-    prelude::*,
-    style::Color,
-    widgets::{block::Title, *},
-};
+use ratatui::{prelude::*, style::Color, widgets::*};
 
 use super::Scale;
 
@@ -66,11 +62,9 @@ impl HabitFrequencyTableWidget {
     pub fn render(&self, frame: &mut Frame, area: Rect) {
         let inner_area = area.inner(Margin::new(1, 1));
         frame.render_widget(
-            Block::bordered().title(self.title()).title(
-                Title::default()
-                    .content("Change scale: <Ctrl> + <←><→> Change periods: <a><s>")
-                    .position(block::Position::Bottom),
-            ),
+            Block::bordered()
+                .title_top(self.title())
+                .title_bottom("Change scale: <Ctrl> + <←><→> Change periods: <a><s>"),
             area,
         );
 
