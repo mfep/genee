@@ -31,7 +31,7 @@ fn main() -> Result<()> {
 }
 
 fn generate_header(cols: usize) -> Vec<String> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut header = vec![];
     for _col in 0..cols {
         let rand_char = A_IDX + rng.next_u32() % (Z_IDX - A_IDX);
@@ -41,12 +41,12 @@ fn generate_header(cols: usize) -> Vec<String> {
 }
 
 fn generate_data(cols: usize, rows: usize) -> Vec<(NaiveDate, Vec<usize>)> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut data = vec![];
     for row in 0..rows {
         let mut row_data = vec![];
         for col in 1..cols + 1 {
-            if rng.gen_bool(0.5) {
+            if rng.random_bool(0.5) {
                 row_data.push(col)
             }
         }
