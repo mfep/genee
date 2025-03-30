@@ -250,11 +250,7 @@ impl HabitDayListWidget {
                 }
             }
             let row = Row::new(cells);
-            if self
-                .habit_table_state
-                .selected()
-                .map_or(false, |selected_idx| selected_idx == row_idx)
-            {
+            if self.habit_table_state.selected() == Some(row_idx) {
                 rows.push(row.bg(Color::DarkGray));
             } else {
                 rows.push(row);

@@ -70,7 +70,7 @@ impl HabitFrequencyTableWidget {
 
         const DATE_RANGE_CHAR_COUNT: u16 = 24; // "2024-01-29 - 2024-02-27 "
         let date_range_num_chars = self.date_ranges.len() as u16 * DATE_RANGE_CHAR_COUNT;
-        let date_range_lines = (date_range_num_chars + inner_area.width - 1) / inner_area.width;
+        let date_range_lines = date_range_num_chars.div_ceil(inner_area.width);
 
         let inner_chunks = Layout::default()
             .direction(Direction::Vertical)
