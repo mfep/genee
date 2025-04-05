@@ -12,7 +12,7 @@ use crossterm::{
     ExecutableCommand,
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
 };
-use genee::datafile::{self, DiaryDataConnection};
+use genee::datafile::{self, DiaryDataSqlite};
 use ratatui::prelude::*;
 
 use self::{
@@ -42,7 +42,7 @@ pub fn run_app(opts: &CliOptions) -> Result<()> {
 }
 
 struct UiApp {
-    datafile: Box<dyn DiaryDataConnection>,
+    datafile: DiaryDataSqlite,
     habit_day_list_widget: HabitDayListWidget,
     habit_frequency_table_widget: HabitFrequencyTableWidget,
     top_occurrence_list_widget: TopOccurrenceListWidget,
@@ -106,16 +106,16 @@ impl UiApp {
     fn new(opts: &CliOptions) -> Result<Self> {
         let datafile = datafile::open_datafile(opts.datafile.as_ref().unwrap())?;
         let start_date = Local::now().date_naive();
-        let habit_day_list_widget = HabitDayListWidget::new(&*datafile, start_date)?;
+        let habit_day_list_widget = HabitDayListWidget::new(&datafile, start_date)?;
         let habit_frequency_table_widget = HabitFrequencyTableWidget::new(
-            &*datafile,
+            &datafile,
             start_date,
             opts,
             habit_day_list_widget.get_scale(),
         )?;
         let (from, until) = habit_frequency_table_widget.get_range();
         let top_occurrence_list_widget =
-            TopOccurrenceListWidget::new(&*datafile, from, until, opts)?;
+            TopOccurrenceListWidget::new(&datafile, from, until, opts)?;
         Ok(UiApp {
             datafile,
             habit_day_list_widget,
@@ -137,58 +137,54 @@ impl UiApp {
                 }
                 if key.code == KeyCode::Up && key.modifiers == KeyModifiers::NONE {
                     self.habit_day_list_widget
-                        .update(&mut *self.datafile, HabitDayListWidgetInput::StepEarlier)?;
+                        .update(&mut self.datafile, HabitDayListWidgetInput::StepEarlier)?;
                     self.update_frequency_table()?;
                 } else if key.code == KeyCode::PageUp {
                     self.habit_day_list_widget
-                        .update(&mut *self.datafile, HabitDayListWidgetInput::StrideEarlier)?;
+                        .update(&mut self.datafile, HabitDayListWidgetInput::StrideEarlier)?;
                     self.update_frequency_table()?;
                 } else if key.code == KeyCode::Down && key.modifiers == KeyModifiers::NONE {
                     self.habit_day_list_widget
-                        .update(&mut *self.datafile, HabitDayListWidgetInput::StepLater)?;
+                        .update(&mut self.datafile, HabitDayListWidgetInput::StepLater)?;
                     self.update_frequency_table()?;
                 } else if key.code == KeyCode::PageDown {
                     self.habit_day_list_widget
-                        .update(&mut *self.datafile, HabitDayListWidgetInput::StrideLater)?;
+                        .update(&mut self.datafile, HabitDayListWidgetInput::StrideLater)?;
                     self.update_frequency_table()?;
                 } else if key.code == KeyCode::Enter {
                     self.habit_day_list_widget
-                        .update(&mut *self.datafile, HabitDayListWidgetInput::SwitchMode)?;
+                        .update(&mut self.datafile, HabitDayListWidgetInput::SwitchMode)?;
                     self.habit_frequency_table_widget
-                        .update(&*self.datafile, HabitFrequencyTableWidgetInput::DataChanged)?;
+                        .update(&self.datafile, HabitFrequencyTableWidgetInput::DataChanged)?;
                     self.update_top_occurrence_table()?;
                 } else if key.code == KeyCode::Left && key.modifiers == KeyModifiers::NONE {
                     self.habit_day_list_widget.update(
-                        &mut *self.datafile,
+                        &mut self.datafile,
                         HabitDayListWidgetInput::NavigateColumn(-1),
                     )?;
                 } else if key.code == KeyCode::Right && key.modifiers == KeyModifiers::NONE {
                     self.habit_day_list_widget.update(
-                        &mut *self.datafile,
+                        &mut self.datafile,
                         HabitDayListWidgetInput::NavigateColumn(1),
                     )?;
                 } else if key.code == KeyCode::Char(' ') {
                     self.habit_day_list_widget
-                        .update(&mut *self.datafile, HabitDayListWidgetInput::SwitchValue)?;
+                        .update(&mut self.datafile, HabitDayListWidgetInput::SwitchValue)?;
                 } else if key.code == KeyCode::Left && key.modifiers == KeyModifiers::CONTROL {
-                    self.habit_frequency_table_widget.update(
-                        &*self.datafile,
-                        HabitFrequencyTableWidgetInput::SmallerScale,
-                    )?;
+                    self.habit_frequency_table_widget
+                        .update(&self.datafile, HabitFrequencyTableWidgetInput::SmallerScale)?;
                     self.update_top_occurrence_table()?;
                 } else if key.code == KeyCode::Right && key.modifiers == KeyModifiers::CONTROL {
                     self.habit_frequency_table_widget
-                        .update(&*self.datafile, HabitFrequencyTableWidgetInput::LargerScale)?;
+                        .update(&self.datafile, HabitFrequencyTableWidgetInput::LargerScale)?;
                     self.update_top_occurrence_table()?;
                 } else if key.code == KeyCode::Char('a') {
-                    self.habit_frequency_table_widget.update(
-                        &*self.datafile,
-                        HabitFrequencyTableWidgetInput::FewerPeriods,
-                    )?;
+                    self.habit_frequency_table_widget
+                        .update(&self.datafile, HabitFrequencyTableWidgetInput::FewerPeriods)?;
                     self.update_top_occurrence_table()?;
                 } else if key.code == KeyCode::Char('s') {
                     self.habit_frequency_table_widget
-                        .update(&*self.datafile, HabitFrequencyTableWidgetInput::MorePeriods)?;
+                        .update(&self.datafile, HabitFrequencyTableWidgetInput::MorePeriods)?;
                     self.update_top_occurrence_table()?;
                 }
             }
@@ -222,7 +218,7 @@ impl UiApp {
             .get_selected_date()
             .unwrap_or_else(|| Local::now().date_naive());
         self.habit_frequency_table_widget.update(
-            &*self.datafile,
+            &self.datafile,
             HabitFrequencyTableWidgetInput::SetBeginDate(selected_date),
         )?;
         self.update_top_occurrence_table()?;
@@ -232,7 +228,7 @@ impl UiApp {
     fn update_top_occurrence_table(&mut self) -> Result<()> {
         let (from, until) = self.habit_frequency_table_widget.get_range();
         self.top_occurrence_list_widget.update(
-            &*self.datafile,
+            &self.datafile,
             TopOccurrenceListWidgetInput::UpdateRange((from, until)),
         )?;
         Ok(())

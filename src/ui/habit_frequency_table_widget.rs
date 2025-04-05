@@ -1,6 +1,6 @@
 use crate::{
     CliOptions,
-    datafile::{self, DiaryDataConnection},
+    datafile::{self, DiaryDataSqlite},
 };
 use anyhow::Result;
 use chrono::NaiveDate;
@@ -41,7 +41,7 @@ pub enum HabitFrequencyTableWidgetInput {
 
 impl HabitFrequencyTableWidget {
     pub fn new(
-        datafile: &dyn DiaryDataConnection,
+        datafile: &DiaryDataSqlite,
         begin_date: NaiveDate,
         opts: &CliOptions,
         scale: Scale,
@@ -126,7 +126,7 @@ impl HabitFrequencyTableWidget {
 
     pub fn update(
         &mut self,
-        datafile: &dyn DiaryDataConnection,
+        datafile: &DiaryDataSqlite,
         input: HabitFrequencyTableWidgetInput,
     ) -> Result<()> {
         match input {
@@ -170,7 +170,7 @@ impl HabitFrequencyTableWidget {
         opts.past_periods = Some(self.iters);
     }
 
-    fn recalculate(&mut self, datafile: &dyn DiaryDataConnection) -> Result<()> {
+    fn recalculate(&mut self, datafile: &DiaryDataSqlite) -> Result<()> {
         self.date_ranges =
             datafile::get_date_ranges(&self.begin_date, self.scale.value(), self.iters);
         self.data_counts = datafile.calculate_data_counts_per_iter(&self.date_ranges)?;

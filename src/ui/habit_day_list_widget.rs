@@ -1,7 +1,7 @@
 use super::{Scale, table_utils};
 use anyhow::Result;
 use chrono::NaiveDate;
-use genee::datafile::DiaryDataConnection;
+use genee::datafile::DiaryDataSqlite;
 use ratatui::{prelude::*, widgets::*};
 
 const DEFAULT_STARTING_HABIT_ROWS: usize = 100;
@@ -41,7 +41,7 @@ pub enum HabitDayListWidgetInput {
 }
 
 impl HabitDayListWidget {
-    pub fn new(datafile: &dyn DiaryDataConnection, start_date: NaiveDate) -> Result<Self> {
+    pub fn new(datafile: &DiaryDataSqlite, start_date: NaiveDate) -> Result<Self> {
         let mut habit_table_state = TableState::default();
         habit_table_state.select(Some(0));
 
@@ -60,7 +60,7 @@ impl HabitDayListWidget {
 
     pub fn update(
         &mut self,
-        datafile: &mut dyn DiaryDataConnection,
+        datafile: &mut DiaryDataSqlite,
         input: HabitDayListWidgetInput,
     ) -> Result<()> {
         match input {
@@ -133,7 +133,7 @@ impl HabitDayListWidget {
         self.scale
     }
 
-    fn navigate_date(&mut self, datafile: &dyn DiaryDataConnection, offset: isize) -> Result<()> {
+    fn navigate_date(&mut self, datafile: &DiaryDataSqlite, offset: isize) -> Result<()> {
         assert_ne!(offset, 0);
         if let WidgetState::Browsing = &self.state {
             let current_row_idx = self.habit_table_state.selected().unwrap_or_default() as isize;
@@ -146,7 +146,7 @@ impl HabitDayListWidget {
 
     fn load_habit_row_batch(
         &mut self,
-        datafile: &dyn DiaryDataConnection,
+        datafile: &DiaryDataSqlite,
         batch_start_date: &NaiveDate,
     ) -> Result<()> {
         let from = *batch_start_date
@@ -164,11 +164,7 @@ impl HabitDayListWidget {
         Ok(())
     }
 
-    fn ensure_habit_row_index(
-        &mut self,
-        datafile: &dyn DiaryDataConnection,
-        index: usize,
-    ) -> Result<()> {
+    fn ensure_habit_row_index(&mut self, datafile: &DiaryDataSqlite, index: usize) -> Result<()> {
         while index >= self.habit_rows.len() {
             self.load_habit_row_batch(
                 datafile,
