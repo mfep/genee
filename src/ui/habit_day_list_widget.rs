@@ -78,10 +78,8 @@ impl HabitDayListWidget {
             }
             HabitDayListWidgetInput::NavigateColumn(offset) => {
                 if let WidgetState::Editing(_) = &self.state {
-                    let new_val = (self.edit_col_idx as isize) + offset;
-                    if new_val >= 0 && new_val < self.header.len() as isize {
-                        self.edit_col_idx = new_val as usize;
-                    }
+                    let new_val = ((self.edit_col_idx as isize) + offset).rem_euclid(self.header.len() as isize);
+                    self.edit_col_idx = new_val as usize;
                 } else if offset > 0 {
                     self.scale = self.scale.larger();
                 } else {
