@@ -182,20 +182,18 @@ impl HabitDayListWidget {
                         cells.push(Cell::new(span));
                     }
                 }
+            } else if self.habit_table_state.selected() == Some(row_idx) {
+                for i in 0..categories.len() {
+                    let span = Span::from(" ");
+                    if i == self.edit_col_idx {
+                        cells.push(Cell::new(span.bg(Color::LightGreen)));
+                    } else {
+                        cells.push(Cell::new(span));
+                    }
+                }
             } else {
-                if self.habit_table_state.selected() == Some(row_idx) {
-                    for i in 0..categories.len() {
-                        let span = Span::from(" ");
-                        if i == self.edit_col_idx {
-                            cells.push(Cell::new(span.bg(Color::LightGreen)));
-                        } else {
-                            cells.push(Cell::new(span));
-                        }
-                    }
-                } else {
-                    for _i in 0..categories.len() {
-                        cells.push(Cell::new("?"));
-                    }
+                for _i in 0..categories.len() {
+                    cells.push(Cell::new("?"));
                 }
             }
             let row = Row::new(cells);
