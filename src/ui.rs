@@ -151,12 +151,6 @@ impl UiApp {
                     self.habit_day_list_widget
                         .update(&mut self.datafile, HabitDayListWidgetInput::StrideLater)?;
                     self.update_frequency_table()?;
-                } else if key.code == KeyCode::Enter {
-                    self.habit_day_list_widget
-                        .update(&mut self.datafile, HabitDayListWidgetInput::SwitchMode)?;
-                    self.habit_frequency_table_widget
-                        .update(&self.datafile, HabitFrequencyTableWidgetInput::DataChanged)?;
-                    self.update_top_occurrence_table()?;
                 } else if key.code == KeyCode::Left && key.modifiers == KeyModifiers::NONE {
                     self.habit_day_list_widget.update(
                         &mut self.datafile,
@@ -170,6 +164,9 @@ impl UiApp {
                 } else if key.code == KeyCode::Char(' ') {
                     self.habit_day_list_widget
                         .update(&mut self.datafile, HabitDayListWidgetInput::SwitchValue)?;
+                    self.habit_frequency_table_widget
+                        .update(&self.datafile, HabitFrequencyTableWidgetInput::DataChanged)?;
+                    self.update_top_occurrence_table()?;
                 } else if key.code == KeyCode::Left && key.modifiers == KeyModifiers::CONTROL {
                     self.habit_frequency_table_widget
                         .update(&self.datafile, HabitFrequencyTableWidgetInput::SmallerScale)?;
