@@ -16,7 +16,7 @@ keywords = ["habit-tracking"]
 
 [dependencies]
 anyhow = "1.0"
-chrono = "0.4.20"
+chrono = "0.4.43"
 clap = { version = "4", features = ["derive"] }
 crossterm = "0.29"
 directories-next = "2.0"
